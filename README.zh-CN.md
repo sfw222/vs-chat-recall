@@ -6,7 +6,7 @@
 
 **数据完全本地**：只读 VS Code 的会话文件，索引与导出都保存在本机，不上传任何内容。
 
-[English →](README.md)
+[English →](README.md) · [日本語 →](README.ja.md)
 
 ## 功能
 
@@ -127,6 +127,7 @@ cargo test          # 解析/索引/检索/MCP/HTML 的回归测试
 
 ```
 src/                  Rust 实现（.jsonl 重放、抽取、SQLite、检索、导出、MCP、HTML）
+src/i18n/             多语言目录（en、zh-CN、ja）
 tests/                集成测试（合成夹具、双 hash 归并、MCP 端到端）
 fixtures/synthetic/   手工构造的边界夹具 + expected/ 断言
 extensions/recall-jump/  可选的跳回扩展

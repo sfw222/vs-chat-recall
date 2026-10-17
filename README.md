@@ -8,7 +8,7 @@ terminal, a browser, or back inside VS Code.
 **Fully local:** it only reads VS Code's own session files; the index and every
 export stay on your machine.
 
-[中文说明 →](README.zh-CN.md)
+[中文说明 →](README.zh-CN.md) · [日本語 →](README.ja.md)
 
 ## Commands
 
@@ -154,7 +154,7 @@ Repository layout:
 
 ```
 src/                  Rust implementation (jsonl replay, extraction, SQLite, search, export, MCP, HTML)
-src/i18n/             message catalogs (zh-CN, en)
+src/i18n/             message catalogs (en, zh-CN, ja)
 tests/                integration tests (synthetic fixtures, dual-hash merge, MCP end to end)
 fixtures/synthetic/   hand-crafted edge cases + expected/ assertions
 extensions/recall-jump/  optional jump-back extension
