@@ -164,8 +164,8 @@ mod tests {
     fn matches_known_vector() {
         // computed independently in PowerShell: [Convert]::ToBase64String(...).TrimEnd('=').Replace(...)
         assert_eq!(
-            b64url_nopad(b"6047f10f-e64b-4801-95c5-33ecfa32668f"),
-            "NjA0N2YxMGYtZTY0Yi00ODAxLTk1YzUtMzNlY2ZhMzI2Njhm"
+            b64url_nopad(b"01234567-89ab-cdef-0123-456789abcdef"),
+            "MDEyMzQ1NjctODlhYi1jZGVmLTAxMjMtNDU2Nzg5YWJjZGVm"
         );
         assert_eq!(session_uri("abc"), "vscode-chat-session://local/YWJj");
         // padding-free and url-safe
