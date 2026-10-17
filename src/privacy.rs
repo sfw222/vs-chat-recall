@@ -113,21 +113,22 @@ impl PrivacyPolicy {
             clause.push_str(
                 " AND (s.project_label NOT LIKE ? ESCAPE '\\' AND s.project_key NOT LIKE ? ESCAPE '\\')",
             );
+            // The clause binds the pattern twice (label and key), so two values.
             let pat = format!("%{}%", escape_like(p));
-            args.push(pat.clone());
-            args.push(pat);
+            args.extend([pat.clone(), pat]);
         }
 
         if !self.allow.is_empty() {
-            let mut ors: Vec<&str> = Vec::new();
-            for _ in &self.allow {
-                ors.push("(s.project_label LIKE ? ESCAPE '\\' OR s.project_key LIKE ? ESCAPE '\\')");
-            }
+            // One OR-group per allow pattern (each group binds two placeholders).
+            let ors: Vec<&str> = vec![
+                "(s.project_label LIKE ? ESCAPE '\\' OR s.project_key LIKE ? ESCAPE '\\')";
+                self.allow.len()
+            ];
             clause.push_str(&format!(" AND ({})", ors.join(" OR ")));
             for p in &self.allow {
+                // Same as above: one pattern per `?` placeholder.
                 let pat = format!("%{}%", escape_like(p));
-                args.push(pat.clone());
-                args.push(pat);
+                args.extend([pat.clone(), pat]);
             }
         }
 

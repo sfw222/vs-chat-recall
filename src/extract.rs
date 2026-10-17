@@ -40,20 +40,11 @@ pub struct ExtractStats {
     pub parts_truncated: u64,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ExtractOptions {
     pub include_thinking: bool,
     /// Cap on an individual part's stored text (chars); `None` = unlimited.
     pub max_part_chars: Option<usize>,
-}
-
-impl Default for ExtractOptions {
-    fn default() -> Self {
-        Self {
-            include_thinking: false,
-            max_part_chars: None,
-        }
-    }
 }
 
 pub fn extract_session(state: &Value, opts: &ExtractOptions) -> (Vec<Turn>, ExtractStats) {
@@ -148,11 +139,11 @@ fn extract_response_part(
                 }
                 Some("thinking") => {
                     bump(&mut stats.part_kinds, "thinking");
-                    if opts.include_thinking {
-                        if let Some(v) = obj.get("value").and_then(|v| v.as_str()) {
-                            let text = clamp(v, opts, stats);
-                            append_joined(&mut turn.thinking_text, &text);
-                        }
+                    if opts.include_thinking
+                        && let Some(v) = obj.get("value").and_then(|v| v.as_str())
+                    {
+                        let text = clamp(v, opts, stats);
+                        append_joined(&mut turn.thinking_text, &text);
                     }
                 }
                 // Legacy-wrapped markdown form.

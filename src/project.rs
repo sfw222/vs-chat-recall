@@ -83,19 +83,19 @@ pub fn resolve_project(user_dir: &Path, hash: &str) -> ProjectInfo {
     let parsed: Option<WorkspaceJson> = raw.as_deref().and_then(|t| serde_json::from_str(t).ok());
 
     if let Some(ws) = parsed {
-        if let Some(folder_uri) = ws.folder.as_deref() {
-            if let Some(path) = file_uri_to_path(folder_uri) {
-                return ProjectInfo {
-                    key: normalize_root(&path),
-                    label: label_of(&path),
-                    open_target: Some(path),
-                };
-            }
+        if let Some(folder_uri) = ws.folder.as_deref()
+            && let Some(path) = file_uri_to_path(folder_uri)
+        {
+            return ProjectInfo {
+                key: normalize_root(&path),
+                label: label_of(&path),
+                open_target: Some(path),
+            };
         }
-        if let Some(workspace_uri) = ws.workspace.as_deref() {
-            if let Some(ws_file) = file_uri_to_path(workspace_uri) {
-                return from_code_workspace(&ws_file);
-            }
+        if let Some(workspace_uri) = ws.workspace.as_deref()
+            && let Some(ws_file) = file_uri_to_path(workspace_uri)
+        {
+            return from_code_workspace(&ws_file);
         }
     }
 

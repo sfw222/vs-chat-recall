@@ -43,10 +43,10 @@ pub fn run(args: ViewArgs) -> Result<()> {
         .out
         .clone()
         .unwrap_or_else(|| default_view_path(&row.id));
-    if let Some(dir) = out.parent() {
-        if !dir.as_os_str().is_empty() {
-            std::fs::create_dir_all(dir)?;
-        }
+    if let Some(dir) = out.parent()
+        && !dir.as_os_str().is_empty()
+    {
+        std::fs::create_dir_all(dir)?;
     }
     std::fs::write(&out, html)?;
 

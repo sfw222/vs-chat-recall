@@ -81,11 +81,11 @@ pub fn run(args: JumpArgs) -> Result<()> {
         "project_key": row.project_key,
         "ts": crate::collect::now_ms(),
     });
-    if let Some(dir) = pending_path.parent() {
-        if !dir.as_os_str().is_empty() {
-            std::fs::create_dir_all(dir)
-                .with_context(|| format!("create dir {}", dir.display()))?;
-        }
+    if let Some(dir) = pending_path.parent()
+        && !dir.as_os_str().is_empty()
+    {
+        std::fs::create_dir_all(dir)
+            .with_context(|| format!("create dir {}", dir.display()))?;
     }
     std::fs::write(&pending_path, serde_json::to_string_pretty(&req)? + "\n")
         .with_context(|| format!("write {}", pending_path.display()))?;
@@ -138,7 +138,7 @@ pub fn session_uri(session_id: &str) -> String {
 pub fn b64url_nopad(data: &[u8]) -> String {
     const ALPHABET: &[u8; 64] =
         b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
-    let mut out = String::with_capacity((data.len() + 2) / 3 * 4);
+    let mut out = String::with_capacity(data.len().div_ceil(3) * 4);
     for chunk in data.chunks(3) {
         let b0 = chunk[0] as u32;
         let b1 = *chunk.get(1).unwrap_or(&0) as u32;

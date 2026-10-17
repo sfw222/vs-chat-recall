@@ -34,13 +34,12 @@ pub fn run(args: ExportArgs) -> Result<()> {
         .iter()
         .filter(|t| args.turn.is_none_or(|i| i == t.idx))
         .collect();
-    if args.turn.is_some() && selected.is_empty() {
+    if selected.is_empty()
+        && let Some(want) = args.turn
+    {
         bail!(
             "{}",
-            trf(
-                "export.no_turn",
-                &[&row.id, &args.turn.unwrap().to_string()]
-            )
+            trf("export.no_turn", &[&row.id, &want.to_string()])
         );
     }
 
@@ -53,10 +52,10 @@ pub fn run(args: ExportArgs) -> Result<()> {
             .join("export")
             .join(default_file_name(&row)),
     };
-    if let Some(dir) = out.parent() {
-        if !dir.as_os_str().is_empty() {
-            std::fs::create_dir_all(dir)?;
-        }
+    if let Some(dir) = out.parent()
+        && !dir.as_os_str().is_empty()
+    {
+        std::fs::create_dir_all(dir)?;
     }
     std::fs::write(&out, text)?;
     println!("{}", trf("export.done", &[&out.display().to_string()]));
@@ -155,7 +154,7 @@ pub fn render_markdown(row: &SessionRow, turns: &[&TurnRow], lang: Lang) -> Stri
         });
         out.push('\n');
     }
-    out.push_str("\n");
+    out.push('\n');
     out
 }
 

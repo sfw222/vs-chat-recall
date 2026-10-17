@@ -191,18 +191,18 @@ pub fn collect(args: &CollectArgs, user_dir: &Path, db_path: &Path) -> Result<Co
         let file_mtime = mtime_ms(&f.path);
 
         let prev = index.get(&path_str);
-        if !args.force {
-            if let Some((psize, pmtime, pid)) = prev {
-                if *psize == file_size && *pmtime == file_mtime {
-                    report.skipped_unchanged += 1;
-                    // Register the skipped file as this session's current copy so
-                    // a duplicate-id file processed later compares against it.
-                    seen_ids
-                        .entry(pid.clone())
-                        .or_insert((path_str.clone(), file_mtime));
-                    continue;
-                }
-            }
+        if !args.force
+            && let Some((psize, pmtime, pid)) = prev
+            && *psize == file_size
+            && *pmtime == file_mtime
+        {
+            report.skipped_unchanged += 1;
+            // Register the skipped file as this session's current copy so
+            // a duplicate-id file processed later compares against it.
+            seen_ids
+                .entry(pid.clone())
+                .or_insert((path_str.clone(), file_mtime));
+            continue;
         }
 
         let outcome = match replay::replay_file(&f.path, None) {

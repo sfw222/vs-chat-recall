@@ -96,11 +96,11 @@ pub fn replay_reader<R: BufRead>(mut reader: R, max_line_bytes: Option<u64>) -> 
         stats.max_line_bytes = stats.max_line_bytes.max(line.len() as u64);
         last_nonempty_had_newline = had_newline;
 
-        if let Some(limit) = max_line_bytes {
-            if line.len() as u64 > limit {
-                stats.oversize_lines += 1;
-                continue;
-            }
+        if let Some(limit) = max_line_bytes
+            && line.len() as u64 > limit
+        {
+            stats.oversize_lines += 1;
+            continue;
         }
 
         let entry: Value = match serde_json::from_slice(line) {

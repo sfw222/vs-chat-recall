@@ -3,6 +3,7 @@
 //! Layout (verified 2026-10-18, VS Code 1.142):
 //! - `<user>\workspaceStorage\<hash>\chatSessions\*.jsonl`
 //! - `<user>\globalStorage\emptyWindowChatSessions\*.jsonl` (no workspace window)
+//!
 //! where `<user>` = `%APPDATA%\Code\User` on Windows.
 
 use std::path::{Path, PathBuf};

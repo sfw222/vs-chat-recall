@@ -35,13 +35,12 @@ pub fn run(args: ShowArgs) -> Result<()> {
         .iter()
         .filter(|t| args.turn.is_none_or(|i| i == t.idx))
         .collect();
-    if args.turn.is_some() && selected.is_empty() {
+    if selected.is_empty()
+        && let Some(want) = args.turn
+    {
         bail!(
             "{}",
-            trf(
-                "show.no_turn",
-                &[&row.id, &args.turn.unwrap().to_string()]
-            )
+            trf("show.no_turn", &[&row.id, &want.to_string()])
         );
     }
 

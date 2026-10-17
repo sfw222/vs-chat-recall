@@ -61,10 +61,10 @@ impl Lang {
         if let Some(l) = cli.and_then(Lang::from_tag) {
             return l;
         }
-        if let Ok(env) = std::env::var("RECALL_LANG") {
-            if let Some(l) = Lang::from_tag(&env) {
-                return l;
-            }
+        if let Ok(env) = std::env::var("RECALL_LANG")
+            && let Some(l) = Lang::from_tag(&env)
+        {
+            return l;
         }
         if let Some(l) = language_from_config(config_path) {
             return l;
@@ -136,12 +136,12 @@ pub fn current() -> Lang {
 }
 
 /// Translate with the current language (set at startup).
-pub fn tr<'a>(key: &'a str) -> &'a str {
+pub fn tr(key: &str) -> &str {
     catalog(current()).get(key)
 }
 
 /// Translate explicitly for a given language.
-pub fn tr_in<'a>(lang: Lang, key: &'a str) -> &'a str {
+pub fn tr_in(lang: Lang, key: &str) -> &str {
     catalog(lang).get(key)
 }
 

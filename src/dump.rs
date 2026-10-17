@@ -106,10 +106,10 @@ pub fn run(args: DumpArgs) -> Result<()> {
     }
 
     for t in &turns {
-        if let Some(i) = args.turn {
-            if i != t.index {
-                continue;
-            }
+        if let Some(i) = args.turn
+            && i != t.index
+        {
+            continue;
         }
         let user = if args.full {
             one_line(&t.user_text)

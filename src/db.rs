@@ -57,11 +57,11 @@ pub struct Db {
 
 impl Db {
     pub fn open(path: &Path) -> Result<Db> {
-        if let Some(dir) = path.parent() {
-            if !dir.as_os_str().is_empty() {
-                std::fs::create_dir_all(dir)
-                    .with_context(|| format!("create db dir {}", dir.display()))?;
-            }
+        if let Some(dir) = path.parent()
+            && !dir.as_os_str().is_empty()
+        {
+            std::fs::create_dir_all(dir)
+                .with_context(|| format!("create db dir {}", dir.display()))?;
         }
         let conn = Connection::open(path).with_context(|| format!("open db {}", path.display()))?;
         init(&conn)?;
