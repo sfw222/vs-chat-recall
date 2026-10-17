@@ -190,9 +190,12 @@ pub fn key_roots(key: &str) -> Vec<&str> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    // Only the Windows-path tests below touch the filesystem.
+    #[cfg(windows)]
     use std::fs;
 
     /// Minimal file-URI encoding for test fixtures (drive paths, spaces).
+    #[cfg(windows)]
     pub(crate) fn encode_uri(p: &str) -> String {
         let s = p.replace('\\', "/").replace(':', "%3A").replace(' ', "%20");
         format!("file:///{s}")
@@ -213,6 +216,10 @@ mod tests {
         assert_eq!(file_uri_to_path("file://"), None);
     }
 
+    /// Windows-only: `file_uri_to_path` yields `\`-separated paths, which
+    /// `Path::join` / `Path::parent` cannot split on Linux (see the portable
+    /// `orphan_hash_is_kept_addressable` below for the cross-platform half).
+    #[cfg(windows)]
     #[test]
     fn folder_and_workspace_hash_merge() {
         let tmp = tempfile::tempdir().unwrap();
@@ -257,8 +264,9 @@ mod tests {
         );
     }
 
+    #[cfg(windows)]
     #[test]
-    fn relative_workspace_folder_and_orphan_fallback() {
+    fn relative_workspace_folder_resolves_against_its_file() {
         let tmp = tempfile::tempdir().unwrap();
         let user = tmp.path().join("Code").join("User");
         let ws_dir = tmp.path().join("wsdir");
@@ -276,8 +284,15 @@ mod tests {
         let p = resolve_project(&user, "hashC");
         assert_eq!(p.key, normalize_root(&ws_dir.join("app").display().to_string()));
         assert_eq!(p.label, "multi");
+    }
 
-        // Orphan hash: no workspace.json at all.
+    /// Platform-independent fallback: an unknown hash stays addressable instead
+    /// of silently merging into another project.
+    #[test]
+    fn orphan_hash_is_kept_addressable() {
+        let tmp = tempfile::tempdir().unwrap();
+        let user = tmp.path().join("Code").join("User");
+
         let o = resolve_project(&user, "missinghash000");
         assert!(o.key.starts_with("hash:"));
         assert!(o.open_target.is_none());
