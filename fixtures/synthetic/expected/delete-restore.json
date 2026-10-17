@@ -1,0 +1,5 @@
+{
+  "turns": [{ "user": "hi", "assistant": "yo" }],
+  "stats": { "unknown_kind": 0, "parse_errors": 0, "apply_errors": 1, "missing_initial": 0, "truncated_tail": false, "oversize_lines": 0 },
+  "session": { "sessionId": "syn-delete", "customTitle": "Y" }
+}

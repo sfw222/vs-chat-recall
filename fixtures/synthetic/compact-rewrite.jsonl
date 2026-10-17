@@ -1,0 +1,4 @@
+{"kind":0,"v":{"version":3,"creationDate":1006,"sessionId":"syn-compact","requests":[{"message":{"text":"old1"},"response":[{"value":"old-a1"}]}]}}
+{"kind":2,"k":["requests"],"v":[{"message":{"text":"old2"},"response":[{"value":"old-a2"}]}]}
+{"kind":0,"v":{"version":3,"creationDate":1006,"sessionId":"syn-compact","requests":[{"message":{"text":"new1"},"response":[{"value":"new-a1"}]},{"message":{"text":"new2"},"response":[{"value":"new-a2"}]}]}}
+{"kind":1,"k":["requests",1,"message","text"],"v":"new2-updated"}

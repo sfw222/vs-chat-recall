@@ -1,0 +1,42 @@
+{
+  "name": "recall-jump",
+  "displayName": "Recall Jump",
+  "description": "打开 recall 索引中的历史 Copilot Chat 会话（作用域感知 + 跨窗口跳转）",
+  "version": "0.0.2",
+  "publisher": "local",
+  "private": true,
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "recall.openSession",
+        "title": "Recall: 打开历史会话（jump）"
+      }
+    ],
+    "configuration": {
+      "title": "Recall Jump",
+      "properties": {
+        "recall.executable": {
+          "type": "string",
+          "default": "",
+          "description": "recall 可执行文件路径；留空时使用 PATH 中的 recall"
+        },
+        "recall.db": {
+          "type": "string",
+          "default": "",
+          "description": "recall 索引数据库路径（必须指定）"
+        },
+        "recall.pendingFile": {
+          "type": "string",
+          "default": "",
+          "description": "跳转请求文件；留空时使用系统临时目录下的 recall-jump-request.json"
+        }
+      }
+    }
+  }
+}

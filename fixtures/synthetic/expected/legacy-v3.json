@@ -1,0 +1,8 @@
+{
+  "turns": [
+    { "user": "legacy user text", "assistant": "legacy assistant text" },
+    { "user": "second user", "assistant": "plain string response" }
+  ],
+  "stats": { "unknown_kind": 0, "parse_errors": 0, "apply_errors": 0, "missing_initial": 0, "truncated_tail": false, "oversize_lines": 0 },
+  "session": { "sessionId": "syn-legacy", "customTitle": "legacy sample" }
+}

@@ -1,0 +1,18 @@
+{
+  "version": 3,
+  "sessionId": "syn-legacy",
+  "creationDate": 1700000000000,
+  "customTitle": "legacy sample",
+  "requests": [
+    {
+      "message": "legacy user text",
+      "response": [
+        { "kind": "markdownContent", "content": { "value": "legacy assistant text" } }
+      ]
+    },
+    {
+      "message": "second user",
+      "response": "plain string response"
+    }
+  ]
+}

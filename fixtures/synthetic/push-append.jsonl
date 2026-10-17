@@ -1,0 +1,3 @@
+{"kind":0,"v":{"version":3,"creationDate":1002,"sessionId":"syn-push-append","requests":[{"requestId":"r1","message":{"text":"u1"},"response":[{"value":"a1"}]}]}}
+{"kind":2,"k":["requests"],"v":[{"requestId":"r2","message":{"parts":[{"text":"u2a","kind":"text"},{"text":"u2b","kind":"text"}]},"response":[{"value":"a2"}]}]}
+{"kind":2,"k":["requests"],"v":[{"requestId":"r3","message":{"text":"u3"},"response":[{"kind":"thinking","value":"t3"},{"kind":"toolInvocationSerialized","toolId":"tool-x","invocationMessage":{"value":"running tool"}},{"value":"a3"}]}]}

@@ -1,0 +1,3 @@
+{"kind":0,"v":{"version":3,"creationDate":1004,"sessionId":"syn-push-trunc","requests":[{"message":{"text":"u1"},"response":[{"value":"a1"}]},{"message":{"text":"u2"},"response":[{"value":"a2"}]},{"message":{"text":"u3"},"response":[{"value":"a3"}]}]}}
+{"kind":2,"k":["requests"],"i":1}
+{"kind":2,"k":["brandNewArray"],"v":[1,2]}

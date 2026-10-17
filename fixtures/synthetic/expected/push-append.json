@@ -1,0 +1,9 @@
+{
+  "turns": [
+    { "user": "u1", "assistant": "a1" },
+    { "user": "u2a\nu2b", "assistant": "a2" },
+    { "user": "u3", "assistant": "a3" }
+  ],
+  "stats": { "unknown_kind": 0, "parse_errors": 0, "apply_errors": 0, "missing_initial": 0, "truncated_tail": false, "oversize_lines": 0 },
+  "session": { "sessionId": "syn-push-append", "customTitle": null }
+}

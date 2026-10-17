@@ -1,0 +1,32 @@
+# build / deps
+/target/
+/node_modules/
+/dist/
+
+# local databases & generated data
+*.db
+*.db-wal
+*.db-shm
+/data/
+
+# real fixtures are local-only — never commit (content AND metadata)
+/fixtures/real/
+
+# personal maintenance script (contains real session ids/paths)
+/scripts/copy-real-fixtures.ps1
+
+# scratch / probe outputs
+/tmp/
+
+# local docs / development notes (kept on disk, not in git)
+/docs/
+/DEVELOPMENT.md
+
+# editor / OS
+.vs/
+Thumbs.db
+
+
+# Added by cargo
+
+/target

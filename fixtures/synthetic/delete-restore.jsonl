@@ -1,0 +1,6 @@
+{"kind":0,"v":{"version":3,"creationDate":1005,"sessionId":"syn-delete","customTitle":"X","requests":[{"message":{"text":"hi"},"response":[{"value":"yo"}],"vote":"up"}]}}
+{"kind":3,"k":["customTitle"]}
+{"kind":1,"k":["customTitle"],"v":"Y"}
+{"kind":3,"k":["requests",0,"vote"]}
+{"kind":1,"k":["requests",0,"vote"],"v":"down"}
+{"kind":3,"k":["nope","x"]}

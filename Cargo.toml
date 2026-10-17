@@ -1,0 +1,25 @@
+[package]
+name = "vs-chat-recall"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "recall"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+chrono = { version = "0.4.45", default-features = false, features = ["clock", "std"] }
+clap = { version = "4", features = ["derive"] }
+percent-encoding = "2.3.2"
+pulldown-cmark = "0.13.4"
+rusqlite = { version = "0.40.2", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+sha2 = "0.10"
+
+[profile.release]
+debug = true  # keep symbols for profiling later; negligible size impact here
+
+[dev-dependencies]
+tempfile = "3.27.0"

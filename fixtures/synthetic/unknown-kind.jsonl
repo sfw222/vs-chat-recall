@@ -1,0 +1,4 @@
+{"kind":0,"v":{"version":3,"creationDate":1007,"sessionId":"syn-unknown","requests":[{"message":{"text":"u1"},"response":[{"value":"a1"}]}]}}
+{"kind":9,"v":{"future":true}}
+{"kind":1,"k":["customTitle"],"v":"x","extraField":{"ignored":true}}
+{"kind":"not-a-number","v":1}

@@ -1,0 +1,5 @@
+{"kind":0,"v":{"version":3,"creationDate":1001,"sessionId":"syn-set","requests":[{"requestId":"req-1","message":{"text":"hello"},"response":[{"value":"hi there"}],"customField":{"a":1}}]}}
+{"kind":1,"k":["requests",0,"customField","b"],"v":42}
+{"kind":1,"k":["requests",0,"message"],"v":{"text":"hello v2"}}
+{"kind":2,"k":["requests",0,"response"],"v":[{"value":"second para"}]}
+{"kind":1,"k":["requests",0,"message","deep","x"],"v":1}
