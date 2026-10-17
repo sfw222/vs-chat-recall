@@ -203,13 +203,19 @@ fn collect_merges_hashes_incremental_and_prune() {
     assert_eq!(turns, 2); // two non-empty sessions, one turn each
 
     // ---- project merge across folder/workspace hashes ----
-    let a = db.find_session("syn-a").unwrap().unwrap();
-    let b = db.find_session("syn-b").unwrap().unwrap();
-    assert_eq!(a.project_key, b.project_key, "dual hashes must merge");
-    assert_eq!(a.project_label, "demo");
-    assert_eq!(b.project_label, "demo");
-    assert!(a.open_target.is_some(), "folder form has a code target");
-    assert!(b.open_target.is_some(), "workspace form has a code target");
+    // Windows-only assertions: `file_uri_to_path` decodes to `\`-separated
+    // paths and `from_code_workspace` resolves them with `Path` helpers, which
+    // only split correctly on Windows (the tool reads %APPDATA%, so sessions
+    // never come from elsewhere). Everything after this block is portable.
+    if cfg!(windows) {
+        let a = db.find_session("syn-a").unwrap().unwrap();
+        let b = db.find_session("syn-b").unwrap().unwrap();
+        assert_eq!(a.project_key, b.project_key, "dual hashes must merge");
+        assert_eq!(a.project_label, "demo");
+        assert_eq!(b.project_label, "demo");
+        assert!(a.open_target.is_some(), "folder form has a code target");
+        assert!(b.open_target.is_some(), "workspace form has a code target");
+    }
 
     // ---- empty window ----
     let e = db.find_session("syn-e").unwrap().unwrap();
