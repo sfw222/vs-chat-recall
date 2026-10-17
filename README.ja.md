@@ -1,5 +1,11 @@
 # vs-chat-recall
 
+[![CI](https://github.com/sfw222/vs-chat-recall/actions/workflows/ci.yml/badge.svg)](https://github.com/sfw222/vs-chat-recall/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/sfw222/vs-chat-recall?display_name=tag&sort=semver)](https://github.com/sfw222/vs-chat-recall/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Rust](https://img.shields.io/badge/rust-1.97-orange.svg)](https://www.rust-lang.org/)
+![Platform](https://img.shields.io/badge/platform-Windows-0078D6.svg)
+
 **VS Code / GitHub Copilot Chat のセッション履歴**（空のウィンドウのセッションも含む）を
 ワークスペースをまたいで横断検索できるようにするツールです。「どこかで似た方針を
 相談した気がする」という程度の曖昧な記憶でも、思いついた言葉のまま検索して該当の

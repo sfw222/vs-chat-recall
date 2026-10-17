@@ -1,5 +1,11 @@
 # vs-chat-recall
 
+[![CI](https://github.com/sfw222/vs-chat-recall/actions/workflows/ci.yml/badge.svg)](https://github.com/sfw222/vs-chat-recall/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/sfw222/vs-chat-recall?display_name=tag&sort=semver)](https://github.com/sfw222/vs-chat-recall/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Rust](https://img.shields.io/badge/rust-1.97-orange.svg)](https://www.rust-lang.org/)
+![Platform](https://img.shields.io/badge/platform-Windows-0078D6.svg)
+
 Cross-workspace recall for your **VS Code / GitHub Copilot Chat session history**
 (including empty-window sessions). Search fuzzy memory in plain words — "I think we
 discussed some xx approach once" — land on the exact turn, then read it in the

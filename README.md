@@ -1,5 +1,11 @@
 # vs-chat-recall
 
+[![CI](https://github.com/sfw222/vs-chat-recall/actions/workflows/ci.yml/badge.svg)](https://github.com/sfw222/vs-chat-recall/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/sfw222/vs-chat-recall?display_name=tag&sort=semver)](https://github.com/sfw222/vs-chat-recall/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Rust](https://img.shields.io/badge/rust-1.97-orange.svg)](https://www.rust-lang.org/)
+![Platform](https://img.shields.io/badge/platform-Windows-0078D6.svg)
+
 跨工作区检索你的 **VS Code / GitHub Copilot Chat 历史会话**（含空窗口会话），
 支持**中文模糊回忆检索**：只记得"我好像讨论过某个 xx 方案"，用一句中文就能搜回去，
 定位到具体一次问答，并在终端、浏览器或 VS Code 里查看完整内容。
