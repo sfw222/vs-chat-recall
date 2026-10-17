@@ -21,18 +21,19 @@ use clap::Args;
 use serde_json::json;
 
 use crate::db::{Db, default_db_path};
+use crate::i18n::{tr, trf};
 
 #[derive(Args, Debug)]
 pub struct JumpArgs {
-    /// 会话 id 或其唯一前缀
+    /// Session id or a unique prefix
     pub session: String,
-    /// 只打印 URI，不做任何跳转
+    /// Print the URI only; do not queue or open anything
     #[arg(long)]
     pub print_only: bool,
-    /// 不打开/聚焦窗口，只写入跳转请求
+    /// Do not open/focus the owning window (only write the jump request)
     #[arg(long)]
     pub no_launch: bool,
-    /// 跳转请求文件（默认为系统临时目录的 recall-jump-request.json，扩展默认读同一路径）
+    /// Jump request file (default: recall-jump-request.json in the system temp dir)
     #[arg(long)]
     pub pending: Option<PathBuf>,
     #[arg(long)]
@@ -42,27 +43,27 @@ pub struct JumpArgs {
 pub fn run(args: JumpArgs) -> Result<()> {
     let db = Db::open(&args.db.clone().unwrap_or_else(default_db_path))?;
     let Some(row) = db.find_session(&args.session)? else {
-        bail!("库中没有会话「{}」（前缀也需先 collect）", args.session);
+        bail!("{}", trf("jump.no_session", &[&args.session]));
     };
 
     let uri = session_uri(&row.id);
     println!(
-        "会话   : {} ({})",
-        row.title.as_deref().unwrap_or("(无标题)"),
-        row.id
+        "{}",
+        trf(
+            "jump.session",
+            &[row.title.as_deref().unwrap_or(tr("common.no_title")), &row.id]
+        )
     );
-    println!("URI    : {uri}");
-    println!(
-        "作用域 : {}",
-        if row.is_empty_window {
-            "空窗口".to_string()
-        } else {
-            format!(
-                "工作区 {}",
-                row.open_target.as_deref().unwrap_or("(未知，无法打开)")
-            )
+    println!("{}", trf("jump.uri", &[&uri]));
+    let scope = if row.is_empty_window {
+        tr("jump.scope_empty").to_string()
+    } else {
+        match row.open_target.as_deref() {
+            Some(t) => trf("jump.scope_workspace", &[t]),
+            None => tr("jump.scope_unknown").to_string(),
         }
-    );
+    };
+    println!("{}", trf("jump.scope", &[&scope]));
 
     if args.print_only {
         return Ok(());
@@ -88,37 +89,40 @@ pub fn run(args: JumpArgs) -> Result<()> {
     }
     std::fs::write(&pending_path, serde_json::to_string_pretty(&req)? + "\n")
         .with_context(|| format!("write {}", pending_path.display()))?;
-    println!("已写入跳转请求: {}", pending_path.display());
+    println!(
+        "{}",
+        trf("jump.request_written", &[&pending_path.display().to_string()])
+    );
 
     if !args.no_launch {
         // Open (or focus) the owning window. The extension there will consume
         // the pending request and open the session.
         let launched = if row.is_empty_window || row.open_target.is_none() {
-            println!("该会话属于空窗口 → 打开一个新的空窗口…");
+            println!("{}", tr("jump.opening_empty"));
             std::process::Command::new("cmd")
                 .args(["/C", "code", "--new-window"])
                 .status()
         } else {
             let target = row.open_target.as_deref().unwrap();
-            println!("正在打开/聚焦所属窗口: {target}");
+            println!("{}", trf("jump.opening_target", &[target]));
             std::process::Command::new("cmd")
                 .args(["/C", "code", target])
                 .status()
         };
         match launched {
             Ok(s) if s.success() => {
-                println!("窗口已打开/聚焦。目标窗口中的 recall-jump 扩展会自动跳转到该会话。")
+                println!("{}", tr("jump.window_done"));
             }
-            Ok(s) => println!("code 退出码 {s}。"),
-            Err(e) => println!("无法执行 code（{e}）。"),
+            Ok(s) => println!("{}", trf("jump.code_exit", &[&s.to_string()])),
+            Err(e) => println!("{}", trf("jump.code_missing", &[&e.to_string()])),
         }
     }
 
-    println!("前提与兜底：");
-    println!("  · 需要已在目标窗口中安装并启用扩展 recall-jump（scripts/install-recall-jump.ps1）");
-    println!("  · 若未自动跳转，可在该窗口命令面板运行「Recall: 打开历史会话（jump）」并输入会话 id");
-    println!("  · 离线兜底：recall view {} --open", row.id);
-    println!("  · 工作区兜底：recall open {}", row.id);
+    println!("{}", tr("jump.prereq"));
+    println!("{}", tr("jump.prereq_ext"));
+    println!("{}", tr("jump.fallback_palette"));
+    println!("{}", trf("jump.fallback_view", &[&row.id]));
+    println!("{}", trf("jump.fallback_open", &[&row.id]));
     Ok(())
 }
 

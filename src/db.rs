@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, bail};
+use crate::i18n::{tr, trf};
 use rusqlite::{Connection, params};
 
 pub const SCHEMA_VERSION: i64 = 1;
@@ -218,8 +219,8 @@ impl Db {
             0 => Ok(None),
             1 => Ok(Some(rows.into_iter().next().unwrap())),
             _ => bail!(
-                "session id 前缀不唯一（匹配 {} 条），请提供更长的前缀",
-                rows.len()
+                "{}",
+                trf("db.session_prefix_ambiguous", &[&rows.len().to_string()])
             ),
         }
     }
@@ -440,7 +441,13 @@ fn init(conn: &Connection) -> Result<()> {
              COMMIT;",
         )?;
     } else if user_version > SCHEMA_VERSION {
-        bail!("db schema 版本 {user_version} 比本程序支持的 {SCHEMA_VERSION} 新，请升级 recall");
+        bail!(
+            "{}",
+            trf(
+                "db.schema_newer",
+                &[&user_version.to_string(), &SCHEMA_VERSION.to_string()]
+            )
+        );
     }
     verify_fts5(conn)?;
     Ok(())
@@ -453,10 +460,10 @@ fn verify_fts5(conn: &Connection) -> Result<()> {
         |r| r.get(0),
     )?;
     if has_fts5 == 0 {
-        bail!("bundled SQLite 未启用 FTS5（配置错误）");
+        bail!("{}", tr("db.fts5_missing"));
     }
     conn.execute_batch("DROP TABLE IF EXISTS _fts_probe; CREATE VIRTUAL TABLE _fts_probe USING fts5(x, tokenize='trigram'); DROP TABLE _fts_probe;")
-        .context("trigram tokenizer 不可用")?;
+        .context(tr("db.trigram_missing"))?;
     Ok(())
 }
 

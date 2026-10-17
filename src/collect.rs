@@ -12,29 +12,30 @@ use clap::Args;
 use serde::Serialize;
 
 use crate::db::{Db, SessionRow, TurnRow, default_db_path};
+use crate::i18n::{tr, trf};
 use crate::project::{ProjectCache, empty_window_project};
 use crate::{extract, replay, sessions};
 
 #[derive(Args, Debug)]
 pub struct CollectArgs {
-    /// 数据库路径（默认 data/recall.db）
+    /// Path to the SQLite index (default: data/recall.db)
     #[arg(long)]
     pub db: Option<PathBuf>,
-    /// VS Code 用户目录（默认 %APPDATA%\Code\User）
+    /// VS Code user directory (default: %APPDATA%\Code\User)
     #[arg(long)]
     pub user_dir: Option<PathBuf>,
-    /// 全量重采（忽略 size/mtime 快路径）
+    /// Re-process every file, ignoring the size/mtime fast path
     #[arg(long)]
     pub force: bool,
-    /// 删除库中 source 文件已不存在的会话
+    /// Delete sessions whose source files are gone
     #[arg(long)]
     pub prune: bool,
-    /// 采集后执行 VACUUM（重建 FTS 索引、回收碎片，首次采集后可显著缩小）
+    /// Run VACUUM after collecting (rebuilds the FTS index, reclaims space)
     #[arg(long)]
     pub vacuum: bool,
     #[arg(long)]
     pub json: bool,
-    /// 每个文件打印一行
+    /// Print one line per processed file
     #[arg(long)]
     pub verbose: bool,
 }
@@ -87,9 +88,14 @@ pub fn run(args: CollectArgs) -> Result<()> {
         db.vacuum()?;
         let after = std::fs::metadata(&db_path).map(|m| m.len()).unwrap_or(0);
         println!(
-            "VACUUM      : {:.1}MB -> {:.1}MB",
-            before as f64 / 1_000_000.0,
-            after as f64 / 1_000_000.0
+            "{}",
+            trf(
+                "collect.vacuum",
+                &[
+                    &format!("{:.1}", before as f64 / 1_000_000.0),
+                    &format!("{:.1}", after as f64 / 1_000_000.0),
+                ]
+            )
         );
     }
     let (db_sessions, db_turns) = db.counts()?;
@@ -101,37 +107,62 @@ pub fn run(args: CollectArgs) -> Result<()> {
         });
         println!("{}", serde_json::to_string_pretty(&out)?);
     } else {
-        println!("扫描文件    : {}", report.files_scanned);
+        println!("{}", trf("collect.scanned", &[&report.files_scanned.to_string()]));
         println!(
-            "新增/更新   : {} / {}（跳过未变 {}）",
-            report.new_sessions, report.updated_sessions, report.skipped_unchanged
+            "{}",
+            trf(
+                "collect.new_updated",
+                &[
+                    &report.new_sessions.to_string(),
+                    &report.updated_sessions.to_string(),
+                    &report.skipped_unchanged.to_string(),
+                ]
+            )
         );
         println!(
-            "疑似压缩重写: {}（文件变小）；空/异常会话: {}；错误: {}",
-            report.rewritten_likely_compaction, report.empty_or_anomalous, report.errors
+            "{}",
+            trf(
+                "collect.rewrite",
+                &[
+                    &report.rewritten_likely_compaction.to_string(),
+                    &report.empty_or_anomalous.to_string(),
+                    &report.errors.to_string(),
+                ]
+            )
         );
         println!(
-            "重复会话 ID : {}（跨 hash 幽灵副本，保留 mtime 最新）",
-            report.session_id_collisions
+            "{}",
+            trf("collect.dup_ids", &[&report.session_id_collisions.to_string()])
+        );
+        let stale_note = if args.prune {
+            trf("collect.stale.pruned", &[&report.pruned.to_string()])
+        } else {
+            tr("collect.stale.hint").to_string()
+        };
+        println!(
+            "{}",
+            trf(
+                "collect.stale",
+                &[&report.stale_in_db.to_string(), &stale_note]
+            )
         );
         println!(
-            "库中失联    : {}{}",
-            report.stale_in_db,
-            if args.prune {
-                format!("（已清理 {}）", report.pruned)
-            } else {
-                "（--prune 可清理）".to_string()
-            }
+            "{}",
+            trf(
+                "collect.elapsed",
+                &[&report.elapsed_ms.to_string(), &report.turns_total.to_string()]
+            )
         );
         println!(
-            "耗时        : {}ms；本次入库 turns {}",
-            report.elapsed_ms, report.turns_total
-        );
-        println!(
-            "库          : {}（会话 {} / turns {}）",
-            db_path.display(),
-            db_sessions,
-            db_turns
+            "{}",
+            trf(
+                "collect.db",
+                &[
+                    &db_path.display().to_string(),
+                    &db_sessions.to_string(),
+                    &db_turns.to_string(),
+                ]
+            )
         );
     }
     Ok(())

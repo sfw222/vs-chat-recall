@@ -1,0 +1,7 @@
+{
+  "extension.description": "Open past Copilot Chat sessions from the recall index (scope-aware, cross-window jump)",
+  "command.openSession.title": "Recall: Open Past Session (Jump)",
+  "config.executable.description": "Path to the recall executable; leave empty to use `recall` from PATH",
+  "config.db.description": "Path to the recall index database (required)",
+  "config.pendingFile.description": "Jump request file; leave empty to use recall-jump-request.json in the system temp dir"
+}

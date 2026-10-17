@@ -13,21 +13,22 @@ use anyhow::{Result, bail};
 use clap::Args;
 
 use crate::db::{Db, default_db_path};
+use crate::i18n::{tr, trf};
 use crate::privacy::PrivacyPolicy;
 use crate::util::{fmt_ms_local, one_line, snippet_for};
 
 #[derive(Args, Debug)]
 pub struct SearchArgs {
-    /// 查询词（中文记忆片段；多词空格分隔需全部命中）
+    /// Query text (words separated by spaces must all match)
     pub query: String,
     #[arg(long, default_value_t = 10)]
     pub limit: usize,
     #[arg(long)]
     pub db: Option<PathBuf>,
-    /// 只搜索项目标签包含该子串的会话
+    /// Only search sessions whose project label contains this substring
     #[arg(long)]
     pub project: Option<String>,
-    /// 片段上下文长度（字符）
+    /// Snippet context length (characters)
     #[arg(long, default_value_t = 90)]
     pub context: usize,
     #[arg(long)]
@@ -41,12 +42,12 @@ pub fn run(args: SearchArgs) -> Result<()> {
         .map(str::to_string)
         .collect();
     if tokens.is_empty() {
-        bail!("查询词为空");
+        bail!("{}", tr("search.empty_query"));
     }
     let db = Db::open(&args.db.clone().unwrap_or_else(default_db_path))?;
     let (sessions_total, turns_total) = db.counts()?;
     if sessions_total == 0 {
-        println!("库为空——请先运行 recall collect");
+        println!("{}", tr("search.library_empty"));
         return Ok(());
     }
 
@@ -74,8 +75,8 @@ pub fn run(args: SearchArgs) -> Result<()> {
             None
         };
         let (field, snippet) = match (user_snip, asst_snip) {
-            (Some(s), _) => ("user", s),
-            (None, Some(s)) => ("assistant", s),
+            (Some(s), _) => (tr("search.user"), s),
+            (None, Some(s)) => (tr("search.assistant"), s),
             (None, None) => ("-", String::new()),
         };
 
@@ -101,12 +102,17 @@ pub fn run(args: SearchArgs) -> Result<()> {
     }
 
     println!(
-        "查询「{}」 mode={} 命中 {} 条（库内 {} 会话 / {} turns）",
-        args.query,
-        if use_fallback { "like" } else { "fts5-trigram" },
-        hits.len(),
-        sessions_total,
-        turns_total
+        "{}",
+        trf(
+            "search.header",
+            &[
+                &args.query,
+                if use_fallback { "like" } else { "fts5-trigram" },
+                &hits.len().to_string(),
+                &sessions_total.to_string(),
+                &turns_total.to_string(),
+            ]
+        )
     );
     for (i, r) in results.iter().enumerate() {
         let sid = r["session_id"].as_str().unwrap_or("");
@@ -117,15 +123,23 @@ pub fn run(args: SearchArgs) -> Result<()> {
         let field = r["field"].as_str().unwrap_or("-");
         let snippet = r["snippet"].as_str().unwrap_or("");
         println!(
-            "{:>2}. [{}] {} · {} · turn {}",
-            i + 1,
-            project,
-            short(title, 60),
-            fmt_ms_local(created),
-            turn
+            "{}",
+            trf(
+                "search.hit",
+                &[
+                    &(i + 1).to_string(),
+                    project,
+                    &short(title, 60),
+                    &fmt_ms_local(created),
+                    &turn.to_string(),
+                ]
+            )
         );
         println!("    {}: {}", field, one_line(snippet));
-        println!("    {}   (recall view {} --turn {} --open)", sid, short_id(sid), turn);
+        println!(
+            "{}",
+            trf("search.hint", &[sid, short_id(sid), &turn.to_string()])
+        );
     }
     Ok(())
 }

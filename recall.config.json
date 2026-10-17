@@ -1,4 +1,5 @@
 {
+  "language": "auto",
   "mcp": {
     "exclude_projects": [],
     "allow_projects": []

@@ -7,16 +7,17 @@ use anyhow::{Result, bail};
 use clap::Args;
 
 use crate::db::{Db, SessionRow, TurnRow, default_db_path};
+use crate::i18n::{Lang, current, tr_in, trf, trf_in};
 use crate::util::fmt_ms_local;
 
 #[derive(Args, Debug)]
 pub struct ExportArgs {
-    /// 会话 id 或其唯一前缀
+    /// Session id or a unique prefix
     pub session: String,
-    /// 只导出该 turn
+    /// Export only this turn
     #[arg(long)]
     pub turn: Option<i64>,
-    /// 输出文件或目录（默认 data/export/<标题>-<id8>.md）
+    /// Output file or directory (default: <temp dir>/recall-export/<title>-<id8>.md)
     #[arg(long)]
     pub out: Option<PathBuf>,
     #[arg(long)]
@@ -26,7 +27,7 @@ pub struct ExportArgs {
 pub fn run(args: ExportArgs) -> Result<()> {
     let db = Db::open(&args.db.clone().unwrap_or_else(default_db_path))?;
     let Some(row) = db.find_session(&args.session)? else {
-        bail!("库中没有会话「{}」（前缀也需先 collect）", args.session);
+        bail!("{}", trf("export.no_session", &[&args.session]));
     };
     let turns = db.turns_for(&row.id)?;
     let selected: Vec<&TurnRow> = turns
@@ -34,10 +35,16 @@ pub fn run(args: ExportArgs) -> Result<()> {
         .filter(|t| args.turn.is_none_or(|i| i == t.idx))
         .collect();
     if args.turn.is_some() && selected.is_empty() {
-        bail!("会话 {} 没有 turn {}", row.id, args.turn.unwrap());
+        bail!(
+            "{}",
+            trf(
+                "export.no_turn",
+                &[&row.id, &args.turn.unwrap().to_string()]
+            )
+        );
     }
 
-    let text = render_markdown(&row, &selected);
+    let text = render_markdown(&row, &selected, current());
 
     let out = match args.out {
         Some(p) if p.extension().and_then(|e| e.to_str()) == Some("md") => p,
@@ -52,7 +59,7 @@ pub fn run(args: ExportArgs) -> Result<()> {
         }
     }
     std::fs::write(&out, text)?;
-    println!("已导出: {}", out.display());
+    println!("{}", trf("export.done", &[&out.display().to_string()]));
     Ok(())
 }
 
@@ -89,8 +96,11 @@ fn yaml_scalar(s: &str) -> String {
     serde_json::to_string(s).unwrap_or_else(|_| "\"\"".to_string())
 }
 
-pub fn render_markdown(row: &SessionRow, turns: &[&TurnRow]) -> String {
-    let title = row.title.clone().unwrap_or_else(|| "(无标题)".to_string());
+pub fn render_markdown(row: &SessionRow, turns: &[&TurnRow], lang: Lang) -> String {
+    let title = row
+        .title
+        .clone()
+        .unwrap_or_else(|| tr_in(lang, "common.no_title").to_string());
     let mut out = String::with_capacity(1 << 16);
 
     out.push_str("---\n");
@@ -117,23 +127,29 @@ pub fn render_markdown(row: &SessionRow, turns: &[&TurnRow]) -> String {
     out.push_str("---\n\n");
     out.push_str(&format!("# {title}\n\n"));
     out.push_str(&format!(
-        "> {} · {} 条消息 · `{}`\n",
+        "> {} · {} · `{}`\n",
         row.project_label,
-        row.turns,
+        trf_in(lang, "page.turns", &[&row.turns.to_string()]),
         row.id
     ));
 
     for t in turns {
-        out.push_str(&format!("\n---\n\n## turn {}\n\n", t.idx));
-        out.push_str("**用户**\n\n");
+        out.push_str(&format!(
+            "\n---\n\n{}\n\n",
+            trf_in(lang, "export.turn", &[&t.idx.to_string()])
+        ));
+        out.push_str(tr_in(lang, "export.user"));
+        out.push_str("\n\n");
         out.push_str(if t.user_text.trim().is_empty() {
-            "_（无文本）_"
+            tr_in(lang, "export.no_text")
         } else {
             t.user_text.trim_end()
         });
-        out.push_str("\n\n**助手**\n\n");
+        out.push_str("\n\n");
+        out.push_str(tr_in(lang, "export.assistant"));
+        out.push_str("\n\n");
         out.push_str(if t.assistant_text.trim().is_empty() {
-            "_（无文本）_"
+            tr_in(lang, "export.no_text")
         } else {
             t.assistant_text.trim_end()
         });
@@ -181,7 +197,7 @@ mod tests {
             assistant_text: "**答**".into(),
         };
         let v = vec![&t];
-        let md = render_markdown(&row(), &v);
+        let md = render_markdown(&row(), &v, Lang::Zh);
         assert!(md.starts_with("---\n"));
         assert!(md.contains("session_id: \"abcdef12-0000\""));
         assert!(md.contains("workspace: \"c:\\\\ws\\\\demo.code-workspace\""));

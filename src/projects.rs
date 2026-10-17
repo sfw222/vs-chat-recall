@@ -10,6 +10,7 @@ use anyhow::Result;
 use clap::Args;
 
 use crate::db::{Db, default_db_path};
+use crate::i18n::{tr, trf};
 
 #[derive(Args, Debug)]
 pub struct ProjectsArgs {
@@ -77,7 +78,12 @@ pub fn run(args: ProjectsArgs) -> Result<()> {
         return Ok(());
     }
 
-    println!("{:<44} {:>8} {:>8}", "项目", "会话", "turns");
+    println!(
+        "{:<44} {:>8} {:>8}",
+        tr("projects.col_project"),
+        tr("projects.col_sessions"),
+        tr("projects.col_turns")
+    );
     println!("{}", "─".repeat(62));
     let mut total_sessions = 0i64;
     let mut total_turns = 0i64;
@@ -94,7 +100,7 @@ pub fn run(args: ProjectsArgs) -> Result<()> {
     println!("{}", "─".repeat(62));
     println!(
         "{:<44} {:>8} {:>8}",
-        format!("共 {} 个项目组", projects.len()),
+        trf("projects.total", &[&projects.len().to_string()]),
         total_sessions,
         total_turns
     );

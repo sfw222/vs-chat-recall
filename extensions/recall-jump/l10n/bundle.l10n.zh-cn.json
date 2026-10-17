@@ -1,0 +1,12 @@
+{
+  "recall: failed to open the session — {0} (fallback: `recall view <id> --open`)": "recall: 打开会话失败 — {0}（可用 `recall view <id> --open` 作为兜底）",
+  "recall: enter a session id (UUID) or a full vscode-chat-session URI": "recall: 输入会话 id（UUID），或完整的 vscode-chat-session URI",
+  "recall: open failed — {0}": "recall: 打开失败 — {0}",
+  "recall: not a valid session UUID": "recall: 不是有效的会话 UUID",
+  "an empty window": "空窗口",
+  "workspace {0}": "工作区 {0}",
+  "(unknown)": "(未知)",
+  "Session \"{0}\" belongs to {1}. This window’s session store does not contain it (opening it directly would only start a blank new session).": "会话「{0}」属于{1}。当前窗口的会话存储不包含它（直接打开只会得到空白新会话）。",
+  "Open in its window and jump": "在所属窗口打开并跳转",
+  "recall: cannot write the jump request — {0}": "recall: 无法写入跳转请求 — {0}"
+}

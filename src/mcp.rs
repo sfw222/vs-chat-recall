@@ -18,6 +18,7 @@ use clap::Args;
 use serde_json::{Value, json};
 
 use crate::db::{Db, default_db_path};
+use crate::i18n::{Lang, tr_in, trf_in};
 use crate::privacy::PrivacyPolicy;
 use crate::util::{fmt_ms_local, one_line, snippet_for};
 
@@ -34,19 +35,12 @@ const MAX_READ_CHARS: usize = 20_000;
 const MAX_TURNS_LISTED: usize = 60;
 const TURN_HEAD_CHARS: usize = 100;
 
-const SERVER_INSTRUCTIONS: &str = "\
-recall：本机 VS Code / GitHub Copilot Chat 历史会话的离线模糊回忆检索（数据完全本地）。
-用法：先用 search_sessions 用一句中文或关键词找历史会话（返回片段与 session_id、turn 序号），
-再用 read_session 读取该会话（或指定 turn）的完整文本。
-索引来自最近一次 `recall collect`（可在终端运行以更新）；未采集过的会话不在库中。
-隐私：被 recall.config.json 排除的项目在服务端强制过滤，不会以任何形式出现在结果里。";
-
 #[derive(Args, Debug)]
 pub struct McpArgs {
-    /// 数据库路径（默认 data/recall.db）
+    /// Database path (default: data/recall.db)
     #[arg(long)]
     pub db: Option<PathBuf>,
-    /// 隐私配置文件（默认 recall.config.json / 环境变量 RECALL_CONFIG）
+    /// Privacy config file (default: recall.config.json / env RECALL_CONFIG)
     #[arg(long)]
     pub config: Option<PathBuf>,
 }
@@ -55,6 +49,7 @@ pub struct McpArgs {
 pub fn run(args: McpArgs) -> Result<()> {
     let db_path = args.db.clone().unwrap_or_else(default_db_path);
     let config_path = args.config.clone().unwrap_or_else(PrivacyPolicy::default_path);
+    let lang = crate::i18n::current();
     let db = Db::open(&db_path)?;
 
     let stdin = std::io::stdin();
@@ -66,11 +61,11 @@ pub fn run(args: McpArgs) -> Result<()> {
             continue;
         }
         let response = match serde_json::from_str::<Value>(line) {
-            Ok(req) => handle_message(&db, &config_path, req),
+            Ok(req) => handle_message(&db, &config_path, req, lang),
             Err(e) => Some(json!({
                 "jsonrpc": "2.0",
                 "id": Value::Null,
-                "error": { "code": -32700, "message": format!("JSON 解析失败: {e}") }
+                "error": { "code": -32700, "message": trf_in(lang, "mcp.err.parse", &[&e.to_string()]) }
             })),
         };
         if let Some(resp) = response {
@@ -91,10 +86,14 @@ fn error_response(id: Value, code: i64, message: &str) -> Value {
 }
 
 /// Handle one incoming message; `None` means "notification, do not answer".
-pub fn handle_message(db: &Db, config_path: &Path, req: Value) -> Option<Value> {
+pub fn handle_message(db: &Db, config_path: &Path, req: Value, lang: Lang) -> Option<Value> {
     if req.is_array() {
         // JSON-RPC batches are not used by the MCP clients we target.
-        return Some(error_response(Value::Null, -32600, "不支持 JSON-RPC 批量请求"));
+        return Some(error_response(
+            Value::Null,
+            -32600,
+            tr_in(lang, "mcp.err.batch"),
+        ));
     }
     let Some(id) = req.get("id").cloned() else {
         // Notifications (e.g. notifications/initialized) — nothing to answer.
@@ -124,7 +123,7 @@ pub fn handle_message(db: &Db, config_path: &Path, req: Value) -> Option<Value> 
                         "name": "recall",
                         "version": env!("CARGO_PKG_VERSION"),
                     },
-                    "instructions": SERVER_INSTRUCTIONS,
+                    "instructions": tr_in(lang, "mcp.instructions"),
                 }
             }))
         }
@@ -132,38 +131,36 @@ pub fn handle_message(db: &Db, config_path: &Path, req: Value) -> Option<Value> 
         "tools/list" => Some(json!({
             "jsonrpc": "2.0",
             "id": id,
-            "result": { "tools": tool_definitions() }
+            "result": { "tools": tool_definitions(lang) }
         })),
-        "tools/call" => Some(tool_call(db, config_path, id, &params)),
+        "tools/call" => Some(tool_call(db, config_path, id, &params, lang)),
         other => Some(error_response(
             id,
             -32601,
-            &format!("未知方法: {other}"),
+            &trf_in(lang, "mcp.err.method", &[other]),
         )),
     }
 }
 
-fn tool_definitions() -> Value {
+fn tool_definitions(lang: Lang) -> Value {
     json!([
         {
             "name": "search_sessions",
-            "description": "在本地 VS Code/Copilot Chat 历史会话中做模糊回忆检索（中文子串语义）。\
-                返回命中片段、session_id、turn 序号、项目与时间。适合“我好像讨论过某个 xx 方案”类回忆。\
-                每次最多返回 20 条（默认 5）；被隐私策略排除的项目不会出现。",
+            "description": tr_in(lang, "mcp.tool.search.desc"),
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "query": {
                         "type": "string",
-                        "description": "回忆关键词或短语（中文直接给子串；多词空格分隔需全部命中）"
+                        "description": "Recall keywords or a phrase (CJK substrings work; space-separated words must all match)"
                     },
                     "limit": {
                         "type": "integer", "minimum": 1, "maximum": 20, "default": 5,
-                        "description": "最多返回条数"
+                        "description": "Maximum number of hits to return"
                     },
                     "project": {
                         "type": "string",
-                        "description": "可选：只搜项目标签包含该子串的会话"
+                        "description": "Optional: only search sessions whose project label contains this substring"
                     }
                 },
                 "required": ["query"],
@@ -172,23 +169,21 @@ fn tool_definitions() -> Value {
         },
         {
             "name": "read_session",
-            "description": "读取某个历史会话的内容。不带 turn 时返回会话信息与逐 turn 的用户消息目录；\
-                带 turn 时返回该 turn 的用户/助手完整文本（受 max_chars 限制并标注截断）。\
-                被隐私策略排除的会话与不存在的会话返回同样的错误信息。",
+            "description": tr_in(lang, "mcp.tool.read.desc"),
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "session_id": {
                         "type": "string",
-                        "description": "会话 id 或其唯一前缀（来自 search_sessions）"
+                        "description": "Session id or a unique prefix (from search_sessions)"
                     },
                     "turn": {
                         "type": "integer", "minimum": 0,
-                        "description": "可选：只读该 turn（0 起）"
+                        "description": "Optional: read only this turn (0-based)"
                     },
                     "max_chars": {
                         "type": "integer", "minimum": 200, "maximum": 20000, "default": 4000,
-                        "description": "单次返回文本上限（字符）"
+                        "description": "Maximum characters returned in one call"
                     }
                 },
                 "required": ["session_id"],
@@ -221,7 +216,7 @@ fn tool_ok(id: Value, text: String, structured: Value) -> Value {
     })
 }
 
-fn tool_call(db: &Db, config_path: &Path, id: Value, params: &Value) -> Value {
+fn tool_call(db: &Db, config_path: &Path, id: Value, params: &Value, lang: Lang) -> Value {
     let name = params.get("name").and_then(|v| v.as_str()).unwrap_or("");
     let arguments = params
         .get("arguments")
@@ -234,19 +229,19 @@ fn tool_call(db: &Db, config_path: &Path, id: Value, params: &Value) -> Value {
         Err(e) => {
             return tool_error(
                 id,
-                format!("隐私配置加载失败（{e:#}）；已拒绝访问，修复 recall.config.json 后重试。"),
+                trf_in(lang, "mcp.err.config", &[&format!("{e:#}")]),
             );
         }
     };
 
     match name {
-        "search_sessions" => tool_search(db, &policy, id, &arguments),
-        "read_session" => tool_read(db, &policy, id, &arguments),
-        _ => tool_error(id, format!("未知工具: {name}")),
+        "search_sessions" => tool_search(db, &policy, id, &arguments, lang),
+        "read_session" => tool_read(db, &policy, id, &arguments, lang),
+        _ => tool_error(id, trf_in(lang, "mcp.err.unknown_tool", &[name])),
     }
 }
 
-fn tool_search(db: &Db, policy: &PrivacyPolicy, id: Value, args: &Value) -> Value {
+fn tool_search(db: &Db, policy: &PrivacyPolicy, id: Value, args: &Value, lang: Lang) -> Value {
     let query = args
         .get("query")
         .and_then(|v| v.as_str())
@@ -254,10 +249,13 @@ fn tool_search(db: &Db, policy: &PrivacyPolicy, id: Value, args: &Value) -> Valu
         .trim()
         .to_string();
     if query.is_empty() {
-        return tool_error(id, "query 不能为空".to_string());
+        return tool_error(id, tr_in(lang, "mcp.err.empty_query").to_string());
     }
     if query.chars().count() > MAX_QUERY_CHARS {
-        return tool_error(id, format!("query 过长（>{MAX_QUERY_CHARS} 字符）"));
+        return tool_error(
+            id,
+            trf_in(lang, "mcp.err.query_long", &[&MAX_QUERY_CHARS.to_string()]),
+        );
     }
     let limit = args
         .get("limit")
@@ -274,7 +272,7 @@ fn tool_search(db: &Db, policy: &PrivacyPolicy, id: Value, args: &Value) -> Valu
         db.search_fts(&tokens, limit, project.as_deref(), policy)
     } {
         Ok(h) => h,
-        Err(e) => return tool_error(id, format!("检索失败: {e:#}")),
+        Err(e) => return tool_error(id, trf_in(lang, "mcp.err.search_failed", &[&format!("{e:#}")])),
     };
 
     let mut blocks: Vec<String> = Vec::new();
@@ -296,7 +294,7 @@ fn tool_search(db: &Db, policy: &PrivacyPolicy, id: Value, args: &Value) -> Valu
         let title = row
             .title
             .clone()
-            .unwrap_or_else(|| "(无标题)".to_string());
+            .unwrap_or_else(|| tr_in(lang, "common.no_title").to_string());
         let user_snip = snippet_for(&hit.user_text, &tokens, 60);
         let asst_snip = if user_snip.is_none() {
             snippet_for(&hit.assistant_text, &tokens, 60)
@@ -304,24 +302,27 @@ fn tool_search(db: &Db, policy: &PrivacyPolicy, id: Value, args: &Value) -> Valu
             None
         };
         let (field, snippet) = match (user_snip, asst_snip) {
-            (Some(s), _) => ("user", s),
-            (None, Some(s)) => ("assistant", s),
+            (Some(s), _) => (tr_in(lang, "search.user"), s),
+            (None, Some(s)) => (tr_in(lang, "search.assistant"), s),
             (None, None) => ("-", String::new()),
         };
         let snippet = clamp_chars(&snippet, MAX_SNIPPET_CHARS);
 
-        blocks.push(format!(
-            "{}. [{}] {} · {} · turn {}\n   {}: {}\n   session: {}（read_session: {{\"session_id\": \"{}\", \"turn\": {}}}）",
-            blocks.len() + 1,
-            row.project_label,
-            title,
-            fmt_ms_local(row.created_ms),
-            hit.idx,
-            field,
-            snippet,
-            row.id,
-            row.id,
-            hit.idx,
+        blocks.push(trf_in(
+            lang,
+            "mcp.result.hit",
+            &[
+                &(blocks.len() + 1).to_string(),
+                &row.project_label,
+                &title,
+                &fmt_ms_local(row.created_ms),
+                &hit.idx.to_string(),
+                field,
+                &snippet,
+                &row.id,
+                &row.id,
+                &hit.idx.to_string(),
+            ],
         ));
         structured_hits.push(json!({
             "session_id": row.id,
@@ -337,9 +338,7 @@ fn tool_search(db: &Db, policy: &PrivacyPolicy, id: Value, args: &Value) -> Valu
     if structured_hits.is_empty() {
         return tool_ok(
             id,
-            "无命中。提示：换更短或更长的关键词（≥3 字走索引，<3 字走全扫）；\
-             若库较旧，先运行 `recall collect` 更新索引。"
-                .to_string(),
+            tr_in(lang, "mcp.result.none").to_string(),
             json!({ "mode": mode_name(use_fallback), "hits": [] }),
         );
     }
@@ -350,10 +349,10 @@ fn tool_search(db: &Db, policy: &PrivacyPolicy, id: Value, args: &Value) -> Valu
     // is literal).
     tool_ok(
         id,
-        format!(
-            "命中 {} 条：\n{}",
-            structured_hits.len(),
-            blocks.join("\n")
+        trf_in(
+            lang,
+            "mcp.result.hits",
+            &[&structured_hits.len().to_string(), &blocks.join("\n")],
         ),
         json!({
             "mode": mode_name(use_fallback),
@@ -366,9 +365,9 @@ fn mode_name(fallback: bool) -> &'static str {
     if fallback { "like" } else { "fts5-trigram" }
 }
 
-fn tool_read(db: &Db, policy: &PrivacyPolicy, id: Value, args: &Value) -> Value {
+fn tool_read(db: &Db, policy: &PrivacyPolicy, id: Value, args: &Value, lang: Lang) -> Value {
     let Some(session_arg) = args.get("session_id").and_then(|v| v.as_str()) else {
-        return tool_error(id, "session_id 不能为空".to_string());
+        return tool_error(id, tr_in(lang, "mcp.err.session_required").to_string());
     };
     let max_chars = args
         .get("max_chars")
@@ -379,15 +378,12 @@ fn tool_read(db: &Db, policy: &PrivacyPolicy, id: Value, args: &Value) -> Value 
 
     // Identical message for "not found" and "excluded" — and no echo of the
     // caller-supplied id, so the two cases are byte-for-byte indistinguishable.
-    let not_found = || {
-        "没有找到该会话。（可能是 id 不正确，或索引未包含；可先 search_sessions，或运行 recall collect 更新索引）"
-            .to_string()
-    };
+    let not_found = || tr_in(lang, "mcp.err.no_session").to_string();
 
     let row = match db.find_session(session_arg) {
         Ok(Some(r)) => r,
         Ok(None) => return tool_error(id, not_found()),
-        Err(e) => return tool_error(id, format!("查询失败: {e:#}")),
+        Err(e) => return tool_error(id, trf_in(lang, "mcp.err.read_failed", &[&format!("{e:#}")])),
     };
     if !policy.is_allowed(&row.project_label, &row.project_key) {
         return tool_error(id, not_found());
@@ -395,7 +391,7 @@ fn tool_read(db: &Db, policy: &PrivacyPolicy, id: Value, args: &Value) -> Value 
 
     let turns = match db.turns_for(&row.id) {
         Ok(t) => t,
-        Err(e) => return tool_error(id, format!("读取失败: {e:#}")),
+        Err(e) => return tool_error(id, trf_in(lang, "mcp.err.read_failed", &[&format!("{e:#}")])),
     };
 
     match turn {
@@ -403,32 +399,44 @@ fn tool_read(db: &Db, policy: &PrivacyPolicy, id: Value, args: &Value) -> Value 
             // Bounded turn directory.
             let mut lines: Vec<String> = Vec::new();
             for t in turns.iter().take(MAX_TURNS_LISTED) {
-                lines.push(format!(
-                    "  turn {}: {}",
-                    t.idx,
-                    if t.user_text.trim().is_empty() {
-                        "(无用户文本)".to_string()
-                    } else {
-                        clamp_chars(&one_line(t.user_text.trim()), TURN_HEAD_CHARS)
-                    }
+                lines.push(trf_in(
+                    lang,
+                    "mcp.read.turn_line",
+                    &[
+                        &t.idx.to_string(),
+                        &if t.user_text.trim().is_empty() {
+                            tr_in(lang, "mcp.read.no_user_text").to_string()
+                        } else {
+                            clamp_chars(&one_line(t.user_text.trim()), TURN_HEAD_CHARS)
+                        },
+                    ],
                 ));
             }
             let more = turns.len().saturating_sub(MAX_TURNS_LISTED);
-            let text = format!(
-                "会话 {}\n标题: {}\n项目: {}\n创建: {}（本地时间）\n消息数: {}{}\nturns:\n{}{}",
-                row.id,
-                row.title.as_deref().unwrap_or("(无标题)"),
-                row.project_label,
-                fmt_ms_local(row.created_ms),
-                turns.len(),
-                if row.is_empty_window { "（空窗口会话）" } else { "" },
+            let text = format!("{}{}",
+                trf_in(
+                    lang,
+                    "mcp.read.header",
+                    &[
+                        &row.id,
+                        row.title.as_deref().unwrap_or(tr_in(lang, "common.no_title")),
+                        &row.project_label,
+                        &fmt_ms_local(row.created_ms),
+                        &turns.len().to_string(),
+                        if row.is_empty_window {
+                            tr_in(lang, "mcp.read.empty_window")
+                        } else {
+                            ""
+                        },
+                    ],
+                ),
                 lines.join("\n"),
-                if more > 0 {
-                    format!("\n  …还有 {more} 个 turn 未列出（用 turn 参数读取）")
-                } else {
-                    String::new()
-                }
-            );
+            )
+            + &if more > 0 {
+                trf_in(lang, "mcp.read.more", &[&more.to_string()])
+            } else {
+                String::new()
+            };
             tool_ok(
                 id,
                 text,
@@ -446,26 +454,55 @@ fn tool_read(db: &Db, policy: &PrivacyPolicy, id: Value, args: &Value) -> Value 
             let Some(t) = turns.iter().find(|t| t.idx == t_idx) else {
                 return tool_error(
                     id,
-                    format!("会话 {} 没有 turn {}（共 {} 个 turn）", row.id, t_idx, turns.len()),
+                    trf_in(
+                        lang,
+                        "mcp.read.no_turn",
+                        &[
+                            &row.id,
+                            &t_idx.to_string(),
+                            &turns.len().to_string(),
+                        ],
+                    ),
                 );
             };
             let header = format!(
-                "会话 {} ｜ {} ｜ turn {}\n【用户】\n",
-                row.id,
-                row.title.as_deref().unwrap_or("(无标题)"),
-                t_idx
+                "{}\n{}\n",
+                trf_in(
+                    lang,
+                    "mcp.read.turn_header",
+                    &[
+                        &row.id,
+                        row.title.as_deref().unwrap_or(tr_in(lang, "common.no_title")),
+                        &t_idx.to_string(),
+                    ],
+                ),
+                tr_in(lang, "mcp.read.user"),
             );
             let body = format!(
-                "{header}{}\n【助手】\n{}",
-                if t.user_text.is_empty() { "(无文本)" } else { &t.user_text },
-                if t.assistant_text.is_empty() { "(无文本)" } else { &t.assistant_text },
+                "{header}{}\n{}\n{}",
+                if t.user_text.is_empty() {
+                    tr_in(lang, "mcp.read.no_text")
+                } else {
+                    &t.user_text
+                },
+                tr_in(lang, "mcp.read.assistant"),
+                if t.assistant_text.is_empty() {
+                    tr_in(lang, "mcp.read.no_text")
+                } else {
+                    &t.assistant_text
+                },
             );
             let total_chars = body.chars().count();
             let truncated = total_chars > max_chars;
             let text = if truncated {
                 format!(
-                    "{}\n\n…[已截断：原始 {total_chars} 字符，本次返回 {max_chars} 字符]",
-                    clamp_chars(&body, max_chars)
+                    "{}{}",
+                    clamp_chars(&body, max_chars),
+                    trf_in(
+                        lang,
+                        "mcp.read.truncated",
+                        &[&total_chars.to_string(), &max_chars.to_string()]
+                    )
                 )
             } else {
                 body
@@ -551,7 +588,7 @@ mod tests {
             "jsonrpc": "2.0", "id": 7, "method": "tools/call",
             "params": { "name": name, "arguments": args }
         });
-        handle_message(db, cfg, req).unwrap()
+        handle_message(db, cfg, req, Lang::Zh).unwrap()
     }
 
     #[test]
@@ -564,7 +601,7 @@ mod tests {
             "jsonrpc": "2.0", "id": 1, "method": "initialize",
             "params": { "protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name":"test","version":"0"} }
         });
-        let resp = handle_message(&db, &cfg, req).unwrap();
+        let resp = handle_message(&db, &cfg, req, Lang::Zh).unwrap();
         assert_eq!(resp["result"]["protocolVersion"], "2025-06-18");
         assert_eq!(resp["result"]["serverInfo"]["name"], "recall");
         assert!(resp["result"]["capabilities"]["tools"].is_object());
@@ -574,12 +611,12 @@ mod tests {
             "jsonrpc": "2.0", "id": 2, "method": "initialize",
             "params": { "protocolVersion": "2099-01-01" }
         });
-        let resp2 = handle_message(&db, &cfg, req2).unwrap();
+        let resp2 = handle_message(&db, &cfg, req2, Lang::Zh).unwrap();
         assert_eq!(resp2["result"]["protocolVersion"], PROTOCOL_VERSION);
 
         // notifications are not answered
         let note = json!({ "jsonrpc": "2.0", "method": "notifications/initialized" });
-        assert!(handle_message(&db, &cfg, note).is_none());
+        assert!(handle_message(&db, &cfg, note, Lang::Zh).is_none());
     }
 
     #[test]
@@ -590,6 +627,7 @@ mod tests {
             &db,
             &dir.path().join("c.json"),
             json!({ "jsonrpc": "2.0", "id": 3, "method": "tools/list" }),
+            Lang::Zh,
         )
         .unwrap();
         let tools = resp["result"]["tools"].as_array().unwrap();

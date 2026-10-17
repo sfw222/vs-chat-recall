@@ -30,6 +30,9 @@ impl McpClient {
             .arg(db)
             .arg("--config")
             .arg(config)
+            // The assertions below check Chinese strings; pin the output
+            // language so the test does not depend on this machine's locale.
+            .env("RECALL_LANG", "zh-CN")
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::null())

@@ -17,6 +17,7 @@ rusqlite = { version = "0.40.2", features = ["bundled"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 sha2 = "0.10"
+sys-locale = "0.3.2"
 
 [profile.release]
 debug = true  # keep symbols for profiling later; negligible size impact here

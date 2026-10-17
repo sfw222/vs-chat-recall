@@ -6,16 +6,17 @@ use anyhow::{Result, bail};
 use clap::Args;
 
 use crate::db::{Db, default_db_path};
+use crate::i18n::{tr, trf};
 use crate::util::fmt_ms_local;
 
 #[derive(Args, Debug)]
 pub struct ShowArgs {
-    /// 会话 id 或其唯一前缀
+    /// Session id or a unique prefix
     pub session: String,
-    /// 只看某一 turn
+    /// Only this turn
     #[arg(long)]
     pub turn: Option<i64>,
-    /// 只输出会话元信息（JSON 时供扩展/脚本使用，不含 turns 正文）
+    /// Print only session metadata (JSON stays free of turn texts)
     #[arg(long)]
     pub meta: bool,
     #[arg(long)]
@@ -27,7 +28,7 @@ pub struct ShowArgs {
 pub fn run(args: ShowArgs) -> Result<()> {
     let db = Db::open(&args.db.clone().unwrap_or_else(default_db_path))?;
     let Some(row) = db.find_session(&args.session)? else {
-        bail!("库中没有会话「{}」（前缀也需先 collect）", args.session);
+        bail!("{}", trf("show.no_session", &[&args.session]));
     };
     let turns = db.turns_for(&row.id)?;
     let selected: Vec<_> = turns
@@ -35,7 +36,13 @@ pub fn run(args: ShowArgs) -> Result<()> {
         .filter(|t| args.turn.is_none_or(|i| i == t.idx))
         .collect();
     if args.turn.is_some() && selected.is_empty() {
-        bail!("会话 {} 没有 turn {}", row.id, args.turn.unwrap());
+        bail!(
+            "{}",
+            trf(
+                "show.no_turn",
+                &[&row.id, &args.turn.unwrap().to_string()]
+            )
+        );
     }
 
     if args.json {
@@ -74,34 +81,59 @@ pub fn run(args: ShowArgs) -> Result<()> {
         return Ok(());
     }
 
-    println!("会话   : {}", row.id);
+    println!("{}", trf("show.session", &[&row.id]));
     println!(
-        "标题   : {}",
-        row.title.as_deref().unwrap_or("(无标题)")
+        "{}",
+        trf("show.title", &[row.title.as_deref().unwrap_or(tr("common.no_title"))])
     );
-    println!("项目   : {}", row.project_label);
+    println!("{}", trf("show.project", &[&row.project_label]));
     println!(
-        "创建   : {}（本地时间）",
-        fmt_ms_local(row.created_ms)
+        "{}",
+        trf("show.created", &[&fmt_ms_local(row.created_ms)])
     );
-    println!("消息数 : {}{}", row.turns, if row.is_empty_window { "（空窗口会话）" } else { "" });
-    println!("源文件 : {}", row.source_path);
+    println!(
+        "{}",
+        trf(
+            "show.messages",
+            &[
+                &row.turns.to_string(),
+                if row.is_empty_window {
+                    tr("show.empty_window_suffix")
+                } else {
+                    ""
+                },
+            ]
+        )
+    );
+    println!("{}", trf("show.source", &[&row.source_path]));
     println!("{}", "─".repeat(72));
 
     for t in selected {
         println!();
         println!(
-            "── turn {} [{}] ──",
-            t.idx,
-            t.request_id.as_deref().unwrap_or("-")
+            "{}",
+            trf(
+                "show.turn",
+                &[
+                    &t.idx.to_string(),
+                    t.request_id.as_deref().unwrap_or("-")
+                ]
+            )
         );
-        println!("【用户】");
-        println!("{}", if t.user_text.is_empty() { "(无文本)" } else { t.user_text.as_str() });
-        println!("【助手】");
+        println!("{}", tr("show.user"));
+        println!(
+            "{}",
+            if t.user_text.is_empty() {
+                tr("show.no_text")
+            } else {
+                t.user_text.as_str()
+            }
+        );
+        println!("{}", tr("show.assistant"));
         println!(
             "{}",
             if t.assistant_text.is_empty() {
-                "(无文本)"
+                tr("show.no_text")
             } else {
                 t.assistant_text.as_str()
             }

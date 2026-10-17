@@ -11,6 +11,7 @@ pub mod dump;
 pub mod export;
 pub mod extract;
 pub mod fixtures;
+pub mod i18n;
 pub mod jump;
 pub mod mcp;
 pub mod md;

@@ -7,23 +7,24 @@ use anyhow::{Result, bail};
 use clap::Args;
 
 use crate::db::{Db, SessionRow, TurnRow, default_db_path};
+use crate::i18n::{Lang, current, tr, tr_in, trf, trf_in};
 use crate::md;
 use crate::util::fmt_ms_local;
 
 #[derive(Args, Debug)]
 pub struct ViewArgs {
-    /// 会话 id 或其唯一前缀
+    /// Session id or a unique prefix
     pub session: String,
-    /// 只把该 turn 作为锚点（页面包含全部 turn，打开时跳到它）
+    /// Anchor this turn (the page still contains every turn; --open jumps to it)
     #[arg(long)]
     pub turn: Option<i64>,
-    /// 输出路径（默认 data/view/<id>.html）
+    /// Output path (default: <temp dir>/recall-view/<id>.html)
     #[arg(long)]
     pub out: Option<PathBuf>,
-    /// 生成后用默认浏览器打开
+    /// Open the generated page in the default browser
     #[arg(long)]
     pub open: bool,
-    /// 使用浅色主题（默认深色夜间主题）
+    /// Use the light theme (dark night theme is the default)
     #[arg(long)]
     pub light: bool,
     #[arg(long)]
@@ -33,11 +34,11 @@ pub struct ViewArgs {
 pub fn run(args: ViewArgs) -> Result<()> {
     let db = Db::open(&args.db.clone().unwrap_or_else(default_db_path))?;
     let Some(row) = db.find_session(&args.session)? else {
-        bail!("库中没有会话「{}」（前缀也需先 collect）", args.session);
+        bail!("{}", trf("view.no_session", &[&args.session]));
     };
     let turns = db.turns_for(&row.id)?;
 
-    let html = render_page(&row, &turns, args.turn, args.light);
+    let html = render_page(&row, &turns, args.turn, args.light, current());
     let out = args
         .out
         .clone()
@@ -50,22 +51,26 @@ pub fn run(args: ViewArgs) -> Result<()> {
     std::fs::write(&out, html)?;
 
     let url = file_url(&out);
-    println!("已生成: {}", out.display());
+    println!("{}", trf("view.generated", &[&out.display().to_string()]));
     let target = match args.turn {
         Some(t) => format!("{url}#turn-{t}"),
         None => url,
     };
     if args.open {
         open_in_browser(&target)?;
-        println!("已用默认浏览器打开（锚点见 URL）");
+        println!("{}", tr("view.opened"));
     } else {
-        println!("浏览器打开: {target}");
+        println!("{}", trf("view.browser", &[&target]));
     }
     Ok(())
 }
 
 fn default_view_path(id: &str) -> PathBuf {
-    PathBuf::from("data").join("view").join(format!("{id}.html"))
+    // Keep generated pages out of the workspace (they would otherwise show up
+    // as diagnostics noise); temp dir is per-user and disposable.
+    std::env::temp_dir()
+        .join("recall-view")
+        .join(format!("{id}.html"))
 }
 
 fn file_url(path: &std::path::Path) -> String {
@@ -84,8 +89,8 @@ fn open_in_browser(url: &str) -> Result<()> {
     let status = std::process::Command::new("xdg-open").arg(url).status();
     match status {
         Ok(s) if s.success() => Ok(()),
-        Ok(s) => bail!("浏览器启动失败（退出码 {s}）"),
-        Err(e) => bail!("无法启动浏览器: {e}"),
+        Ok(s) => bail!("{}", trf("view.browser_failed", &[&s.to_string()])),
+        Err(e) => bail!("{}", trf("view.browser_missing", &[&e.to_string()])),
     }
 }
 
@@ -191,9 +196,14 @@ pub fn render_page(
     turns: &[TurnRow],
     target_turn: Option<i64>,
     light: bool,
+    lang: Lang,
 ) -> String {
-    let title = row.title.clone().unwrap_or_else(|| "(无标题)".to_string());
+    let title = row
+        .title
+        .clone()
+        .unwrap_or_else(|| tr_in(lang, "common.no_title").to_string());
     let mut body = String::with_capacity(1 << 20);
+    let badge = |idx: i64| trf_in(lang, "page.turn_badge", &[&idx.to_string()]);
 
     for t in turns {
         let rid = t
@@ -203,55 +213,86 @@ pub fn render_page(
             .unwrap_or_default();
         body.push_str(&format!(
             "<section class=\"turn\" id=\"turn-{idx}\">\
-             <div class=\"turn-head\"><span class=\"badge\">turn {idx}</span>{rid}</div>",
+             <div class=\"turn-head\"><span class=\"badge\">{badge}</span>{rid}</div>",
             idx = t.idx,
+            badge = badge(t.idx),
             rid = rid,
         ));
         let open = target_turn == Some(t.idx);
-        push_message(&mut body, "user", "用户", &t.user_text, open);
-        push_message(&mut body, "assistant", "助手", &t.assistant_text, open);
+        push_message(
+            &mut body,
+            lang,
+            "user",
+            tr_in(lang, "page.user"),
+            &t.user_text,
+            open,
+        );
+        push_message(
+            &mut body,
+            lang,
+            "assistant",
+            tr_in(lang, "page.assistant"),
+            &t.assistant_text,
+            open,
+        );
         body.push_str("</section>");
     }
 
     let max_turn = turns.iter().map(|t| t.idx).max().unwrap_or(0);
-    let max_label = format!("turn {max_turn}");
+    let max_label = badge(max_turn);
     // Reserve the hover width up front (widest "turn N") so the rail does not
     // jitter as the pointer moves between entries.
     let toc_w = 24 + max_label.chars().count() * 7;
     let mut toc = String::with_capacity(turns.len() * 90);
     toc.push_str(&format!(
-        "<nav class=\"toc\" style=\"--toc-w:{toc_w}px\" aria-label=\"turn 目录\">"
+        "<nav class=\"toc\" style=\"--toc-w:{toc_w}px\" aria-label=\"{}\">",
+        esc(tr_in(lang, "page.toc_label"))
     ));
     for t in turns {
         toc.push_str(&format!(
-            "<a href=\"#turn-{idx}\" title=\"turn {idx}\"><span class=\"dash\">–</span>\
-             <span class=\"lbl\">turn {idx}</span></a>",
-            idx = t.idx
+            "<a href=\"#turn-{idx}\" title=\"{badge}\"><span class=\"dash\">–</span>\
+             <span class=\"lbl\">{badge}</span></a>",
+            idx = t.idx,
+            badge = badge(t.idx)
         ));
     }
     toc.push_str("</nav>");
 
+    let meta1 = format!(
+        "{} · {} · {} · <code>{}</code>",
+        trf_in(lang, "page.project", &[&esc(&row.project_label)]),
+        trf_in(lang, "page.created", &[&fmt_ms_local(row.created_ms)]),
+        trf_in(lang, "page.turns", &[&turns.len().to_string()]),
+        esc(&row.id)
+    );
+    let meta2 = trf_in(lang, "page.source", &[&esc(&row.source_path)]);
+    let expand = tr_in(lang, "page.expand");
+    let collapse = tr_in(lang, "page.collapse");
+    let css_text = format!(
+        "{CSS}\nsummary .lbl::after {{ content: \"{expand}\"; }}\n\
+         details[open] summary .lbl::after {{ content: \"{collapse}\"; }}\n"
+    );
+
     let theme = if light { "light" } else { "dark" };
     format!(
-        "<!DOCTYPE html>\n<html lang=\"zh-CN\">\n<head>\n<meta charset=\"utf-8\">\n\
+        "<!DOCTYPE html>\n<html lang=\"{lang_code}\">\n<head>\n<meta charset=\"utf-8\">\n\
          <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n\
          <title>{title} · recall</title>\n<style>{css}</style>\n</head>\n<body data-theme=\"{theme}\">\n\
          {toc}\n\
          <header class=\"meta\">\n<h1>{title}</h1>\n\
-         <div class=\"sub\">项目 {project} · 创建 {created} · {turns} 条消息 · <code>{id}</code></div>\n\
-         <div class=\"sub\">源文件 {src}</div>\n</header>\n\
-         <main>\n{body}</main>\n<footer>由 recall 生成（本地）</footer>\n\
+         <div class=\"sub\">{meta1}</div>\n\
+         <div class=\"sub\">{meta2}</div>\n</header>\n\
+         <main>\n{body}</main>\n<footer>{footer}</footer>\n\
          <script>{script}</script>\n</body>\n</html>\n",
         title = esc(&title),
-        css = CSS,
+        css = css_text,
         theme = theme,
+        lang_code = lang.code(),
         toc = toc,
         script = TOC_SCRIPT,
-        project = esc(&row.project_label),
-        created = fmt_ms_local(row.created_ms),
-        turns = turns.len(),
-        id = esc(&row.id),
-        src = esc(&row.source_path),
+        meta1 = meta1,
+        meta2 = meta2,
+        footer = esc(tr_in(lang, "page.footer")),
         body = body,
     )
 }
@@ -260,13 +301,16 @@ pub fn render_page(
 /// messages get a rendered **preview** plus a `<details>` disclosure for the
 /// remainder; when open, the "收起" summary is sticky (bounded by this
 /// message's box) so it stays reachable while scrolling.
-fn push_message(out: &mut String, kind: &str, label: &str, text: &str, open: bool) {
+fn push_message(out: &mut String, lang: Lang, kind: &str, label: &str, text: &str, open: bool) {
     out.push_str(&format!(
         "<div class=\"msg msg-{kind}\"><div class=\"role\"><span class=\"dot\"></span>\
          <span class=\"name\">{label}</span></div><div class=\"body\">"
     ));
     if text.trim().is_empty() {
-        out.push_str("<p class=\"empty\">（无文本）</p>");
+        out.push_str(&format!(
+            "<p class=\"empty\">{}</p>",
+            esc(tr_in(lang, "page.empty"))
+        ));
     } else {
         let chars = text.chars().count();
         if chars > COLLAPSE_CHARS {
@@ -276,9 +320,9 @@ fn push_message(out: &mut String, kind: &str, label: &str, text: &str, open: boo
             out.push_str("</div>");
             out.push_str(&format!(
                 "<details class=\"more\"{}><summary><span class=\"chev\"></span>\
-                 <span class=\"lbl\"></span><span class=\"meta\">{} 字符</span></summary><div class=\"md\">",
+                 <span class=\"lbl\"></span><span class=\"meta\">{}</span></summary><div class=\"md\">",
                 if open { " open" } else { "" },
-                chars,
+                esc(&trf_in(lang, "page.chars", &[&chars.to_string()])),
             ));
             out.push_str(&md::to_html(rest));
             out.push_str("</div></details>");
@@ -326,6 +370,8 @@ const CSS: &str = r#"
   --bg: #0f1218; --fg: #dfe6ef; --muted: #94a0b0; --dim: #5d6675;
   --panel: #12161e; --panel-2: #161b24; --border: #232a36; --border-strong: #2a3140;
   --accent: #5b9dff; --user-accent: #e0b25c; --turn-accent: #6fce9f;
+  --link-dot: rgba(91, 157, 255, 0.55); --user-bar: rgba(224, 178, 92, 0.65);
+  --accent-bar: rgba(91, 157, 255, 0.65); --turn-glow: rgba(111, 206, 159, 0.6);
   --accent-soft: rgba(91, 157, 255, 0.12); --user-soft: rgba(224, 178, 92, 0.12);
   --code-bg: #0b0e14; --code-inline: #1a202b; --table-head: #1a202b;
   --zebra: rgba(255, 255, 255, 0.025);
@@ -337,6 +383,8 @@ body[data-theme="light"] {
   --bg: #ffffff; --fg: #1f2328; --muted: #57606a; --dim: #8c959f;
   --panel: #f7f9fb; --panel-2: #eef1f4; --border: #d8dee4; --border-strong: #d0d7de;
   --accent: #0969da; --user-accent: #bf8700; --turn-accent: #1a7f37;
+  --link-dot: rgba(9, 105, 218, 0.55); --user-bar: rgba(191, 135, 0, 0.65);
+  --accent-bar: rgba(9, 105, 218, 0.65); --turn-glow: rgba(26, 127, 55, 0.5);
   --accent-soft: rgba(9, 105, 218, 0.08); --user-soft: rgba(191, 135, 0, 0.10);
   --code-bg: #f6f8fa; --code-inline: #eff2f5; --table-head: #f6f8fa;
   --zebra: rgba(0, 0, 0, 0.015);
@@ -349,12 +397,13 @@ body { margin: 0 auto; max-width: 860px; padding: 22px 24px 90px;
   letter-spacing: 0.015em;
   background: var(--bg); color: var(--fg); text-rendering: optimizeLegibility; }
 a { color: var(--accent); text-decoration: none;
-  border-bottom: 1px dotted color-mix(in srgb, var(--accent) 55%, transparent); }
+  border-bottom: 1px dotted var(--link-dot); }
 a:hover { border-bottom-style: solid; }
 code, pre { font-family: Consolas, "Cascadia Mono", "JetBrains Mono", "Courier New", monospace; }
 
 header.meta { position: sticky; top: 0; z-index: 30;
-  background: var(--header-bg); backdrop-filter: blur(10px);
+  background: var(--header-bg);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
   padding: 6px 0 10px; margin-bottom: 26px; }
 header.meta h1 { font-size: 19px; line-height: 1.35; margin: 0 0 6px; }
@@ -388,9 +437,10 @@ header.meta .sub code { font-size: 11px; }
 .toc a:hover { background: var(--code-inline); color: var(--fg); }
 .toc:not(:hover) a.active .dash { color: var(--turn-accent); font-weight: 700;
   opacity: 1; transform: scale(1.5);
-  text-shadow: 0 0 10px color-mix(in srgb, var(--turn-accent) 60%, transparent); }
+  text-shadow: 0 0 10px var(--turn-glow); }
 .toc:hover { width: var(--toc-w); height: min(72vh, 640px);
-  background: var(--header-bg); backdrop-filter: blur(8px);
+  background: var(--header-bg);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
   box-shadow: var(--chip-shadow); }
 .toc:hover a .lbl { display: inline; }
 .toc:hover a .dash { display: none; }
@@ -420,8 +470,8 @@ header.meta .sub code { font-size: 11px; }
 .msg-assistant .role { color: var(--accent); }
 .msg-assistant .role .name { background: var(--accent-soft); }
 .msg .body { padding-left: 16px; border-left: 3px solid var(--border-strong); }
-.msg-user .body { border-left-color: color-mix(in srgb, var(--user-accent) 65%, transparent); }
-.msg-assistant .body { border-left-color: color-mix(in srgb, var(--accent) 65%, transparent); }
+.msg-user .body { border-left-color: var(--user-bar); }
+.msg-assistant .body { border-left-color: var(--accent-bar); }
 
 /* Reading rhythm: uniform spacing between top-level blocks (Markdown-app feel). */
 .md { font-size: 16px; }
@@ -455,14 +505,16 @@ header.meta .sub code { font-size: 11px; }
 .md.preview { opacity: .98; }
 details.more { margin-top: 1.15em; }
 summary { display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
-  user-select: none; padding: 6px 14px; border-radius: 999px; font-size: 12.5px;
+  -webkit-user-select: none; user-select: none; padding: 6px 14px;
+  border-radius: 999px; font-size: 12.5px;
   background: var(--code-inline); border: 1px solid var(--border-strong); color: var(--muted); }
 summary:hover { color: var(--fg); border-color: var(--accent); }
 summary::-webkit-details-marker { display: none; }
 summary .chev::before { content: "▸"; }
 details[open] summary .chev::before { content: "▾"; }
-summary .lbl::after { content: "展开剩余全文"; }
-details[open] summary .lbl::after { content: "收起"; }
+summary .lbl::after { content: ""; }
+/* Per-language label contents are injected after this stylesheet. */
+details[open] summary .lbl::after { content: ""; }
 summary .meta { color: var(--dim); }
 /* Sticky "收起" while open: follows the scroll, clamped by this message box
    and parked right below the sticky header. */
@@ -503,8 +555,9 @@ mod tests {
             user_text: "问 <script>x</script>".into(),
             assistant_text: "答 **粗**".into(),
         }];
-        let html = render_page(&row, &turns, Some(3), true);
+        let html = render_page(&row, &turns, Some(3), true, Lang::Zh);
         assert!(html.contains("data-theme=\"light\""));
+        assert!(html.contains("lang=\"zh-CN\""));
         assert!(html.contains("class=\"name\">用户"));
         assert!(html.contains("class=\"name\">助手"));
         assert!(html.contains("id=\"turn-3\""));
@@ -544,15 +597,47 @@ mod tests {
             user_text: "短问题".into(),
             assistant_text: long,
         }];
-        let html = render_page(&row, &turns, None, false);
+        let html = render_page(&row, &turns, None, false, Lang::Zh);
         assert!(html.contains("<details class=\"more\">"), "long message should be collapsed");
         assert!(!html.contains("<details class=\"more\" open>"));
         assert!(html.contains("2000 字符"));
         assert!(html.contains("class=\"md preview\""), "preview renders above the disclosure");
         assert_eq!(html.matches("<details").count(), 1, "only the long one collapses");
 
-        let html2 = render_page(&row, &turns, Some(0), false);
+        let html2 = render_page(&row, &turns, Some(0), false, Lang::Zh);
         assert!(html2.contains("<details class=\"more\" open>"), "targeted turn starts expanded");
+    }
+
+    #[test]
+    fn english_page_uses_english_labels() {
+        let row = SessionRow {
+            id: "s3".into(),
+            source_path: "C:/x/s3.jsonl".into(),
+            workspace_hash: None,
+            is_empty_window: false,
+            project_key: "k".into(),
+            project_label: "proj".into(),
+            open_target: None,
+            title: Some("hello".into()),
+            created_ms: Some(1000),
+            file_size: 1,
+            file_mtime_ms: 1,
+            turns: 1,
+        };
+        let turns = vec![TurnRow {
+            idx: 0,
+            request_id: None,
+            user_text: "question".into(),
+            assistant_text: "answer".into(),
+        }];
+        let html = render_page(&row, &turns, None, false, Lang::En);
+        assert!(html.contains("lang=\"en\""));
+        assert!(html.contains("class=\"name\">User"));
+        assert!(html.contains("class=\"name\">Assistant"));
+        assert!(html.contains("Show the rest"));
+        assert!(html.contains("Collapse"));
+        assert!(html.contains("generated by recall"));
+        assert!(html.contains("turn index"));
     }
 
     #[test]

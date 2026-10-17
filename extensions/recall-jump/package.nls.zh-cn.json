@@ -1,0 +1,7 @@
+{
+  "extension.description": "打开 recall 索引中的历史 Copilot Chat 会话（作用域感知 + 跨窗口跳转）",
+  "command.openSession.title": "Recall: 打开历史会话（jump）",
+  "config.executable.description": "recall 可执行文件路径；留空时使用 PATH 中的 recall",
+  "config.db.description": "recall 索引数据库路径（必须指定）",
+  "config.pendingFile.description": "跳转请求文件；留空时使用系统临时目录下的 recall-jump-request.json"
+}

@@ -12,10 +12,11 @@ use anyhow::{Result, bail};
 use clap::Args;
 
 use crate::db::{Db, default_db_path};
+use crate::i18n::trf;
 
 #[derive(Args, Debug)]
 pub struct OpenArgs {
-    /// 会话 id 或其唯一前缀
+    /// Session id or a unique prefix
     pub session: String,
     #[arg(long)]
     pub db: Option<PathBuf>,
@@ -24,21 +25,23 @@ pub struct OpenArgs {
 pub fn run(args: OpenArgs) -> Result<()> {
     let db = Db::open(&args.db.clone().unwrap_or_else(default_db_path))?;
     let Some(row) = db.find_session(&args.session)? else {
-        bail!("库中没有会话「{}」", args.session);
+        bail!("{}", trf("open.no_session", &[&args.session]));
     };
 
     let Some(target) = row.open_target.as_deref() else {
         if row.is_empty_window {
             bail!(
-                "该会话为空窗口会话（无工作区），无法用 code 打开。\n\
-                 可手动在 VS Code 的 Agent Sessions/历史中按标题「{}」定位。",
-                row.title.as_deref().unwrap_or("(无标题)")
+                "{}",
+                trf(
+                    "open.empty_window",
+                    &[row.title.as_deref().unwrap_or("(untitled)")]
+                )
             );
         }
-        bail!("该会话没有可用的工作区目标（workspace.json 缺失或无法解析）");
+        bail!("{}", crate::i18n::tr("open.no_target"));
     };
 
-    println!("打开 VS Code：{target}");
+    println!("{}", trf("open.opening", &[target]));
     #[cfg(windows)]
     let status = Command::new("cmd").args(["/C", "code", target]).status();
     #[cfg(not(windows))]
@@ -46,7 +49,7 @@ pub fn run(args: OpenArgs) -> Result<()> {
 
     match status {
         Ok(s) if s.success() => Ok(()),
-        Ok(s) => bail!("code 退出码 {s}"),
-        Err(e) => bail!("无法执行 code：{e}（确认 VS Code 的 bin 在 PATH 中）"),
+        Ok(s) => bail!("{}", trf("open.exit", &[&s.to_string()])),
+        Err(e) => bail!("{}", trf("open.launch_failed", &[&e.to_string()])),
     }
 }

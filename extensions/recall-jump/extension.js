@@ -17,6 +17,8 @@ const os = require('os');
 const path = require('path');
 const { spawn } = require('child_process');
 
+const l10n = vscode.l10n;
+
 const UUID_RE = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 const PENDING_TTL_MS = 10 * 60 * 1000;
 
@@ -100,9 +102,10 @@ async function openSessionUri(sessionId) {
     return true;
   } catch (e) {
     vscode.window.showErrorMessage(
-      'recall: 打开会话失败 — ' +
-        (e && e.message ? e.message : String(e)) +
-        '（可用 recall view <id> --open 作为兜底）'
+      l10n.t(
+        'recall: failed to open the session — {0} (fallback: `recall view <id> --open`)',
+        e && e.message ? e.message : String(e)
+      )
     );
     return false;
   }
@@ -113,7 +116,7 @@ async function openSession(arg) {
   if (!input) {
     input = (
       (await vscode.window.showInputBox({
-        prompt: 'recall: 输入会话 id（UUID），或完整的 vscode-chat-session URI',
+        prompt: l10n.t('recall: enter a session id (UUID) or a full vscode-chat-session URI'),
         placeHolder: 'e.g. 3f2a9c1e-7b4d-4c8e-9a10-5d6f2b8c4e71',
       })) || ''
     ).trim();
@@ -125,26 +128,29 @@ async function openSession(arg) {
     try {
       await vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(input));
     } catch (e) {
-      vscode.window.showErrorMessage('recall: 打开失败 — ' + (e && e.message ? e.message : String(e)));
+      vscode.window.showErrorMessage(l10n.t('recall: open failed — {0}', e && e.message ? e.message : String(e)));
     }
     return;
   }
 
   const sessionId = UUID_RE.test(input) ? input : undefined;
   if (!sessionId) {
-    vscode.window.showErrorMessage('recall: 不是有效的会话 UUID');
+    vscode.window.showErrorMessage(l10n.t('recall: not a valid session UUID'));
     return;
   }
 
   const meta = await describe(sessionId);
   if (meta && !inScope(meta)) {
     const where = meta.is_empty_window
-      ? '空窗口'
-      : '工作区 ' + (meta.open_target || '(未知)');
+      ? l10n.t('an empty window')
+      : l10n.t('workspace {0}', meta.open_target || l10n.t('(unknown)'));
     const action = await vscode.window.showWarningMessage(
-      `会话「${meta.title || sessionId.slice(0, 8)}」属于${where}。` +
-        '当前窗口的会话存储不包含它（直接打开只会得到空白新会话）。',
-      '在所属窗口打开并跳转'
+      l10n.t(
+        'Session "{0}" belongs to {1}. This window\u2019s session store does not contain it (opening it directly would only start a blank new session).',
+        meta.title || sessionId.slice(0, 8),
+        where
+      ),
+      l10n.t('Open in its window and jump')
     );
     if (action) await scheduleJump(meta);
     return;
@@ -173,7 +179,7 @@ async function scheduleJump(meta) {
       )
     );
   } catch (e) {
-    vscode.window.showErrorMessage('recall: 无法写入跳转请求 — ' + (e && e.message ? e.message : String(e)));
+    vscode.window.showErrorMessage(l10n.t('recall: cannot write the jump request — {0}', e && e.message ? e.message : String(e)));
     return;
   }
   if (meta.is_empty_window || !meta.open_target) {

@@ -1,0 +1,12 @@
+{
+  "recall: failed to open the session — {0} (fallback: `recall view <id> --open`)": "recall: failed to open the session — {0} (fallback: `recall view <id> --open`)",
+  "recall: enter a session id (UUID) or a full vscode-chat-session URI": "recall: enter a session id (UUID) or a full vscode-chat-session URI",
+  "recall: open failed — {0}": "recall: open failed — {0}",
+  "recall: not a valid session UUID": "recall: not a valid session UUID",
+  "an empty window": "an empty window",
+  "workspace {0}": "workspace {0}",
+  "(unknown)": "(unknown)",
+  "Session \"{0}\" belongs to {1}. This window’s session store does not contain it (opening it directly would only start a blank new session).": "Session \"{0}\" belongs to {1}. This window’s session store does not contain it (opening it directly would only start a blank new session).",
+  "Open in its window and jump": "Open in its window and jump",
+  "recall: cannot write the jump request — {0}": "recall: cannot write the jump request — {0}"
+}

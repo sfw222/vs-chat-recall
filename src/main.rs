@@ -1,11 +1,11 @@
 //! recall — cross-workspace VS Code / Copilot Chat session recall.
 //!
-//! P1 scope: streaming replay of session logs + text extraction + bench.
+//! Runtime output is localized (zh-CN / en); CLI help stays English.
 
 use clap::{Parser, Subcommand};
 use vs_chat_recall::{
-    alloc_counter, bench, collect, dump, export, fixtures, jump, mcp, open, projects, search, show,
-    view,
+    alloc_counter, bench, collect, dump, export, fixtures, i18n, jump, mcp, open, privacy, projects,
+    search, show, view,
 };
 
 #[global_allocator]
@@ -18,29 +18,32 @@ static ALLOC: alloc_counter::CountingAlloc = alloc_counter::CountingAlloc;
     about = "Cross-workspace VS Code / Copilot Chat session recall (local only)"
 )]
 struct Cli {
+    /// Output language: zh-CN or en (default: follow the OS locale)
+    #[arg(long, global = true, value_name = "zh-CN|en")]
+    lang: Option<String>,
     #[command(subcommand)]
     cmd: Cmd,
 }
 
 #[derive(Subcommand)]
 enum Cmd {
-    /// 扫描本机会话并增量入库（SQLite + FTS5 trigram）
+    /// Scan local sessions and incrementally build the SQLite index
     Collect(collect::CollectArgs),
-    /// 中文模糊回忆检索（定位到具体 turn）
+    /// Fuzzy recall search over collected sessions
     Search(search::SearchArgs),
-    /// 终端打印会话完整内容
+    /// Print the full text of one session
     Show(show::ShowArgs),
-    /// 生成可读 HTML 页面（turn 锚点，可 --open）
+    /// Generate a readable HTML page (turn anchors; --open to launch the browser)
     View(view::ViewArgs),
-    /// 导出 markdown（Obsidian frontmatter）
+    /// Export markdown (Obsidian-compatible frontmatter)
     Export(export::ExportArgs),
-    /// 列出已归并的项目（folder/workspace 双 hash 合并结果）
+    /// List merged projects (folder / multi-root hashes merged by root paths)
     Projects(projects::ProjectsArgs),
-    /// 打开会话所属的 VS Code 工作区窗口
+    /// Open the VS Code window that owns a session
     Open(open::OpenArgs),
-    /// P5 跳回：写入跳转请求并打开/聚焦会话所属窗口（目标窗口自动跳转；含兜底提示）
+    /// Jump back: queue a jump request and open/focus the owning window
     Jump(jump::JumpArgs),
-    /// 以 MCP 服务运行（stdio，newline-delimited JSON-RPC）：search_sessions / read_session
+    /// Run as an MCP server over stdio (search_sessions / read_session)
     Mcp(mcp::McpArgs),
     /// Replay session logs and report load time, memory, and parse statistics.
     Bench(bench::BenchArgs),
@@ -52,7 +55,10 @@ enum Cmd {
 
 fn main() -> anyhow::Result<()> {
     alloc_counter::reset();
-    match Cli::parse().cmd {
+    let cli = Cli::parse();
+    let lang = i18n::Lang::resolve(cli.lang.as_deref(), &privacy::PrivacyPolicy::default_path());
+    i18n::set_lang(lang);
+    match cli.cmd {
         Cmd::Collect(args) => collect::run(args),
         Cmd::Projects(args) => projects::run(args),
         Cmd::Search(args) => search::run(args),
