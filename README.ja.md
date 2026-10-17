@@ -8,7 +8,7 @@ turn を特定し、ターミナル・ブラウザー・VS Code のいずれで�
 **完全にローカル:** VS Code 自身のセッションファイルを読むだけで、インデックスも
 エクスポートもすべて手元に残ります。
 
-[English →](README.md) · [中文说明 →](README.zh-CN.md)
+[English →](README.en.md) · [中文说明 →](README.md)
 
 ## コマンド
 
