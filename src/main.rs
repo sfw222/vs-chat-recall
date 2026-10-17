@@ -18,7 +18,7 @@ static ALLOC: alloc_counter::CountingAlloc = alloc_counter::CountingAlloc;
     about = "Cross-workspace VS Code / Copilot Chat session recall (local only)"
 )]
 struct Cli {
-    /// Output language: zh-CN or en (default: follow the OS locale)
+    /// Output language: en, zh-CN or ja (default: follow the OS locale)
     #[arg(long, global = true, value_name = "zh-CN|en")]
     lang: Option<String>,
     #[command(subcommand)]

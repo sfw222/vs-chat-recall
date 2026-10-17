@@ -1,0 +1,7 @@
+{
+  "extension.description": "recall のインデックスから過去の Copilot Chat セッションを開きます（スコープ判定 + ウィンドウ跨ぎのジャンプ）",
+  "command.openSession.title": "Recall: 過去のセッションを開く（jump）",
+  "config.executable.description": "recall 実行ファイルのパス。空欄なら PATH 上の recall を使用",
+  "config.db.description": "recall インデックスデータベースのパス（必須）",
+  "config.pendingFile.description": "ジャンプ要求ファイル。空欄ならシステムの一時ディレクトリの recall-jump-request.json を使用"
+}

@@ -4,11 +4,16 @@
 //!   1. `--lang <tag>` (global CLI flag)
 //!   2. env `RECALL_LANG`
 //!   3. `recall.config.json` → `"language"` (`"auto"` = OS locale)
-//!   4. OS locale: `zh*` → Chinese, anything else → English
+//!   4. OS locale: `zh*` → Chinese, `ja*` → Japanese, anything else → English
+//!
+//! `en.json` is the source of truth: every key used in the code must exist
+//! there. Other catalogs may be partial — a missing key falls back to English
+//! instead of leaking the raw key into the UI — so translations can land
+//! incrementally. Tests enforce: en completeness, no unknown keys in other
+//! catalogs, and a coverage floor.
 //!
 //! Adding a language: add `<tag>.json` next to this file, add an enum variant
-//! and an arm in `catalog()`. The parity test enforces identical key sets, and
-//! the used-keys test scans call sites so nothing silently falls back to keys.
+//! and the arms in `code()` / `from_tag()` / `catalog()`.
 
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -17,6 +22,7 @@ use std::sync::OnceLock;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Lang {
     Zh,
+    Ja,
     En,
 }
 
@@ -24,6 +30,7 @@ impl Lang {
     pub fn code(self) -> &'static str {
         match self {
             Lang::Zh => "zh-CN",
+            Lang::Ja => "ja",
             Lang::En => "en",
         }
     }
@@ -32,6 +39,8 @@ impl Lang {
         let t = tag.trim().to_ascii_lowercase();
         if t.starts_with("zh") {
             Some(Lang::Zh)
+        } else if t.starts_with("ja") {
+            Some(Lang::Ja)
         } else if t.starts_with("en") {
             Some(Lang::En)
         } else {
@@ -76,8 +85,17 @@ impl Catalog {
         Self { map }
     }
 
+    /// Look up `key`, falling back to the English catalog. A partially
+    /// translated locale therefore degrades to English instead of showing the
+    /// raw key; only a key missing everywhere returns itself (a bug signal).
     pub fn get<'a>(&'a self, key: &'a str) -> &'a str {
-        self.map.get(key).map(String::as_str).unwrap_or(key)
+        if let Some(v) = self.map.get(key).map(String::as_str) {
+            return v;
+        }
+        if let Some(v) = catalog(Lang::En).map.get(key).map(String::as_str) {
+            return v;
+        }
+        key
     }
 
     pub fn contains(&self, key: &str) -> bool {
@@ -94,6 +112,10 @@ fn catalog(lang: Lang) -> &'static Catalog {
         Lang::Zh => {
             static C: OnceLock<Catalog> = OnceLock::new();
             C.get_or_init(|| Catalog::parse(include_str!("zh-CN.json")))
+        }
+        Lang::Ja => {
+            static C: OnceLock<Catalog> = OnceLock::new();
+            C.get_or_init(|| Catalog::parse(include_str!("ja.json")))
         }
         Lang::En => {
             static C: OnceLock<Catalog> = OnceLock::new();
@@ -155,23 +177,73 @@ fn language_from_config(path: &Path) -> Option<Lang> {
 mod tests {
     use super::*;
 
+    /// All catalogs except English, for the cross-catalog checks below.
+    const TRANSLATIONS: [Lang; 2] = [Lang::Zh, Lang::Ja];
+
+    /// `en.json` is the source of truth: every call-site key must exist there.
     #[test]
-    fn catalogs_have_identical_keys() {
-        let zh = catalog(Lang::Zh);
+    fn all_call_site_keys_exist_in_english() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+        let mut used: Vec<String> = Vec::new();
+        collect_keys(&root, &mut used);
+        assert!(!used.is_empty(), "no tr() calls found?");
+        for key in &used {
+            assert!(
+                catalog(Lang::En).contains(key),
+                "key missing in en.json: {key}"
+            );
+        }
+    }
+
+    /// Translations may be partial, but must not invent keys (that is a typo).
+    #[test]
+    fn translations_have_no_unknown_keys() {
         let en = catalog(Lang::En);
-        let mut zh_keys: Vec<&str> = zh.keys().collect();
-        let mut en_keys: Vec<&str> = en.keys().collect();
-        zh_keys.sort();
-        en_keys.sort();
-        assert_eq!(zh_keys, en_keys, "zh-CN.json and en.json must share the same keys");
+        for lang in TRANSLATIONS {
+            for key in catalog(lang).keys() {
+                assert!(
+                    en.contains(key),
+                    "{} has a key that does not exist in en.json: {key}",
+                    lang.code()
+                );
+            }
+        }
+    }
+
+    /// Guard against a language landing with a handful of keys; the missing
+    /// ones are printed so a contributor sees the remaining to-do list.
+    #[test]
+    fn translations_cover_most_of_english() {
+        let en = catalog(Lang::En);
+        let total = en.keys().count();
+        for lang in TRANSLATIONS {
+            let cat = catalog(lang);
+            let missing: Vec<&str> = en.keys().filter(|k| !cat.contains(k)).collect();
+            let covered = total - missing.len();
+            println!("{}: {covered}/{total} keys translated", lang.code());
+            assert!(
+                covered * 100 / total >= 80,
+                "{} covers only {covered}/{total}; missing: {missing:?}",
+                lang.code()
+            );
+        }
+    }
+
+    /// A gap in a translation must degrade to English, never to the raw key.
+    #[test]
+    fn missing_key_falls_back_to_english() {
+        let mut map: BTreeMap<String, String> = serde_json::from_str(include_str!("en.json"))
+            .expect("en.json must parse");
+        map.remove("common.no_title");
+        let partial = Catalog { map };
+        assert_eq!(partial.get("common.no_title"), "(untitled)");
+        assert_eq!(partial.get("totally.unknown.key"), "totally.unknown.key");
     }
 
     #[test]
     fn english_catalog_has_no_cjk() {
-        for (k, v) in catalog(Lang::En)
-            .keys()
-            .map(|k| (k, catalog(Lang::En).get(k)))
-        {
+        let en = catalog(Lang::En);
+        for (k, v) in en.keys().map(|k| (k, en.get(k))) {
             assert!(
                 !v.chars().any(|c| ('\u{4e00}'..='\u{9fff}').contains(&c)),
                 "en.json value contains CJK characters: {k} = {v}"
@@ -179,19 +251,16 @@ mod tests {
         }
     }
 
-    /// Every `tr/trf/tr_in/trf_in` call site must use a key present in all catalogs.
+    /// Simplified-Chinese-only characters never appear in Japanese: catching
+    /// them here catches a copy-pasted zh value in ja.json.
     #[test]
-    fn all_call_site_keys_exist() {
-        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
-        let mut used: Vec<String> = Vec::new();
-        collect_keys(&root, &mut used);
-        assert!(!used.is_empty(), "no tr() calls found?");
-        for key in &used {
-            assert!(
-                catalog(Lang::Zh).contains(key),
-                "key missing in zh-CN.json: {key}"
-            );
-            assert!(catalog(Lang::En).contains(key), "key missing in en.json: {key}");
+    fn japanese_catalog_has_no_simplified_chinese_forms() {
+        const SIMPLIFIED_ONLY: &str = "们么让说请谢东车还过进这录简单认识复杂铁银见时间无头后从儿习书买义乐乡举兴为个对发关开长门问题试页选择图标签码实应结给线";
+        let ja = catalog(Lang::Ja);
+        for (k, v) in ja.keys().map(|k| (k, ja.get(k))) {
+            if let Some(c) = v.chars().find(|c| SIMPLIFIED_ONLY.contains(*c)) {
+                panic!("ja.json value looks like Simplified Chinese ({c}): {k} = {v}");
+            }
         }
     }
 

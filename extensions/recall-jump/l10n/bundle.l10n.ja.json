@@ -1,0 +1,12 @@
+{
+  "recall: failed to open the session — {0} (fallback: `recall view <id> --open`)": "recall: セッションを開けませんでした — {0}（代替: `recall view <id> --open`）",
+  "recall: enter a session id (UUID) or a full vscode-chat-session URI": "recall: セッション id（UUID）または完全な vscode-chat-session URI を入力",
+  "recall: open failed — {0}": "recall: オープンに失敗しました — {0}",
+  "recall: not a valid session UUID": "recall: 有効なセッション UUID ではありません",
+  "an empty window": "空のウィンドウ",
+  "workspace {0}": "ワークスペース {0}",
+  "(unknown)": "(不明)",
+  "Session \"{0}\" belongs to {1}. This window’s session store does not contain it (opening it directly would only start a blank new session).": "セッション「{0}」は{1}に属しています。現在のウィンドウのセッションストアには含まれないため、そのまま開くと空の新規セッションになるだけです。",
+  "Open in its window and jump": "所有ウィンドウで開いてジャンプ",
+  "recall: cannot write the jump request — {0}": "recall: ジャンプ要求を書き込めません — {0}"
+}

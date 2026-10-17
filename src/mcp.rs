@@ -301,10 +301,12 @@ fn tool_search(db: &Db, policy: &PrivacyPolicy, id: Value, args: &Value, lang: L
         } else {
             None
         };
-        let (field, snippet) = match (user_snip, asst_snip) {
-            (Some(s), _) => (tr_in(lang, "search.user"), s),
-            (None, Some(s)) => (tr_in(lang, "search.assistant"), s),
-            (None, None) => ("-", String::new()),
+        // `field` stays a locale-independent machine value (it lands in the
+        // structuredContent); only the human-readable line is localized.
+        let (field, label, snippet) = match (user_snip, asst_snip) {
+            (Some(s), _) => ("user", tr_in(lang, "search.user"), s),
+            (None, Some(s)) => ("assistant", tr_in(lang, "search.assistant"), s),
+            (None, None) => ("-", "-", String::new()),
         };
         let snippet = clamp_chars(&snippet, MAX_SNIPPET_CHARS);
 
@@ -317,7 +319,7 @@ fn tool_search(db: &Db, policy: &PrivacyPolicy, id: Value, args: &Value, lang: L
                 &title,
                 &fmt_ms_local(row.created_ms),
                 &hit.idx.to_string(),
-                field,
+                label,
                 &snippet,
                 &row.id,
                 &row.id,

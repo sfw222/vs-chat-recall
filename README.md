@@ -63,16 +63,25 @@ git-ignored.
 
 ## Language
 
-Runtime messages follow your system locale (`zh*` → Chinese, anything else →
-English). Override in order of precedence:
+Bundled languages: **English** (`en`), **Simplified Chinese** (`zh-CN`) and
+**Japanese** (`ja`). Runtime messages follow your system locale (`zh*` →
+Chinese, `ja*` → Japanese, anything else → English). Override in order of
+precedence:
 
-1. `--lang <tag>` on any command (e.g. `recall --lang en search …`)
+1. `--lang <tag>` on any command (e.g. `recall --lang ja search …`)
 2. the `RECALL_LANG` environment variable
-3. `"language": "zh-CN" | "en" | "auto"` in `recall.config.json`
+3. `"language": "zh-CN" | "ja" | "en" | "auto"` in `recall.config.json`
 4. the OS locale
 
-`--help` texts are English. Adding a language means adding one JSON catalog in
-`src/i18n/` plus one enum variant; tests enforce key parity between catalogs.
+`--help` texts are English.
+
+Adding a language: drop a `<tag>.json` catalog next to `src/i18n/en.json`, then
+add the enum variant and the arms in `code()` / `from_tag()` / `catalog()`.
+`en.json` is the source of truth — a key missing from your catalog falls back to
+English instead of showing the raw key, so translations can land incrementally.
+Tests enforce that en.json covers every call-site key, that no catalog invents
+keys, and that each translation covers at least 80% of en.json (missing keys are
+printed by `cargo test -- --nocapture`).
 
 ## Copilot Chat integration (MCP, optional)
 

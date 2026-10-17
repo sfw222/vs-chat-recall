@@ -53,16 +53,20 @@ cargo build --release
 
 > 会话格式为 VS Code 内部实现（已在 VS Code 1.142 实测）。升级 VS Code 后格式可能变化：
 > 解析器采用"宽进"策略（未知事件计数跳过，不会中断），但新字段可能需要后续适配。
+
 ## 语言
 
-运行时输出跟随系统区域（`zh*` → 中文，其余 → 英文）。按以下优先级覆盖：
+内置语言：**英文**（`en`）、**简体中文**（`zh-CN`）、**日文**（`ja`）。运行时输出跟随系统区域（`zh*` → 中文，`ja*` → 日文，其余 → 英文）。按以下优先级覆盖：
 
-1. 任意命令加 `--lang <tag>`（如 `recall --lang en search …`）
+1. 任意命令加 `--lang <tag>`（如 `recall --lang ja search …`）
 2. 环境变量 `RECALL_LANG`
-3. `recall.config.json` 的 `"language": "zh-CN" | "en" | "auto"`
+3. `recall.config.json` 的 `"language": "zh-CN" | "ja" | "en" | "auto"`
 4. 系统区域
 
-`--help` 文案恒为英文。新增语言 = `src/i18n/` 加一份 JSON 目录 + 一个枚举分支；测试会强制多份目录键集一致。
+`--help` 文案恒为英文。
+
+新增语言：在 `src/i18n/en.json` 旁放一份 `<tag>.json`，再加枚举分支及 `code()` / `from_tag()` / `catalog()` 里的对应项。`en.json` 是唯一权威：你的目录缺哪个键就回退到英文（不会把原始 key 显示给用户），因此翻译可以分批落地。测试会强制：en.json 覆盖全部调用点 key、其他目录不得出现多佘 key、每份翻译至少覆盖 en.json 的 80%（缺失清单可用 `cargo test -- --nocapture` 查看）。
+
 ## 接入 Copilot Chat（MCP，可选）
 
 在 VS Code 的 `mcp.json` 中注册（`command` 换成你构建出的可执行文件路径）：
