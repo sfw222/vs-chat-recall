@@ -2,9 +2,10 @@
   "name": "recall-jump",
   "displayName": "Recall Jump — Copilot Chat History",
   "description": "%extension.description%",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "sfw222",
   "license": "MIT",
+  "icon": "icon.png",
   "engines": {
     "vscode": "^1.100.0"
   },

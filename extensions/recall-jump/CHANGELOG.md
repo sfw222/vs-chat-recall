@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.1 — 2026-10-18
+
+- 添加扩展图标（128×128 PNG），Marketplace 列表页与扩展面板不再显示占位图
+
 ## 1.0.0 — 2026-10-18
 
 首个公开版本（配合 `recall` CLI v0.1.0 发布到 VS Code Marketplace）。
