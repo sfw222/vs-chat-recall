@@ -1,6 +1,10 @@
 {
-  "extension.description": "Open past Copilot Chat sessions from the recall index (scope-aware, cross-window jump)",
+  "extension.description": "Collect & manage VS Code / GitHub Copilot Chat history — local index, fuzzy recall, one-click jump back to the original session (needs the recall CLI)",
   "command.openSession.title": "Recall: Open Past Session (Jump)",
+  "command.pickDb.title": "Recall: Select Index File…",
+  "command.pickExecutable.title": "Recall: Select recall Executable…",
+  "command.collect.title": "Recall: Run collect (Build the Index)",
+  "command.checkSetup.title": "Recall: Check Setup",
   "config.executable.description": "Path to the recall executable; leave empty to use `recall` from PATH",
   "config.db.description": "Path to the recall index database (required)",
   "config.pendingFile.description": "Jump request file; leave empty to use recall-jump-request.json in the system temp dir"

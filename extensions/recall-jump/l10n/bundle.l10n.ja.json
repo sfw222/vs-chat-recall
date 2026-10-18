@@ -8,5 +8,19 @@
   "(unknown)": "(不明)",
   "Session \"{0}\" belongs to {1}. This window’s session store does not contain it (opening it directly would only start a blank new session).": "セッション「{0}」は{1}に属しています。現在のウィンドウのセッションストアには含まれないため、そのまま開くと空の新規セッションになるだけです。",
   "Open in its window and jump": "所有ウィンドウで開いてジャンプ",
-  "recall: cannot write the jump request — {0}": "recall: ジャンプ要求を書き込めません — {0}"
+  "recall: cannot write the jump request — {0}": "recall: ジャンプ要求を書き込めません — {0}",
+  "the recall CLI was not found ({0})": "recall CLI が見つかりません（{0}）",
+  "no index file is configured (recall.db)": "インデックスファイル（recall.db）が未設定です",
+  "the index file does not exist: {0}": "インデックスファイルが存在しません: {0}",
+  "recall-jump needs the recall CLI and its index. Missing: {0}": "recall-jump には recall CLI とインデックスが必要です。不足: {0}",
+  "Select recall executable…": "recall 実行ファイルを選択…",
+  "Select index file…": "インデックスファイルを選択…",
+  "Run recall collect": "recall collect を実行",
+  "Open download page": "ダウンロードページを開く",
+  "Don't show again": "今後表示しない",
+  "recall: executable set to {0}": "recall: 実行ファイルを {0} に設定しました",
+  "recall: index file set to {0}": "recall: インデックスを {0} に設定しました",
+  "Use as the recall CLI": "recall CLI として使う",
+  "Use as the recall index": "recall インデックスとして使う",
+  "Save the recall index here": "ここに recall インデックスを保存"
 }

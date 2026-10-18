@@ -1,12 +1,15 @@
 # Sideload the local `recall-jump` extension into the user extensions dir.
 # Manual install = copy the folder + reload window; uninstall = delete it.
+# For a Marketplace install instead, just search "Recall Jump" in VS Code.
 $ErrorActionPreference = 'Stop'
 $src = Join-Path (Split-Path -Parent $PSScriptRoot) 'extensions\recall-jump'
 $extRoot = Join-Path $env:USERPROFILE '.vscode\extensions'
-$dst = Join-Path $extRoot 'local.recall-jump-0.0.2'
 
-# remove any older sideloaded version
-Get-ChildItem $extRoot -Directory -Filter 'local.recall-jump-*' -ErrorAction SilentlyContinue |
+$manifest = Get-Content -Raw (Join-Path $src 'package.json') | ConvertFrom-Json
+$dst = Join-Path $extRoot "$($manifest.publisher).$($manifest.name)-$($manifest.version)"
+
+# remove any older sideloaded version (including the pre-1.0 `local.` layout)
+Get-ChildItem $extRoot -Directory -Filter '*recall-jump-*' -ErrorAction SilentlyContinue |
     Where-Object { $_.FullName -ne $dst } |
     ForEach-Object { Remove-Item $_.FullName -Recurse -Force }
 

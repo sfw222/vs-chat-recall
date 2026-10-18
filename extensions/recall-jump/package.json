@@ -1,14 +1,35 @@
 {
   "name": "recall-jump",
-  "displayName": "Recall Jump",
+  "displayName": "Recall Jump — Copilot Chat History",
   "description": "%extension.description%",
-  "version": "0.0.2",
-  "publisher": "local",
-  "private": true,
+  "version": "1.0.0",
+  "publisher": "sfw222",
+  "license": "MIT",
   "engines": {
     "vscode": "^1.100.0"
   },
   "categories": ["Other"],
+  "keywords": [
+    "chat history",
+    "copilot chat",
+    "session",
+    "recall",
+    "local",
+    "jump"
+  ],
+  "pricing": "Free",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sfw222/vs-chat-recall.git"
+  },
+  "homepage": "https://github.com/sfw222/vs-chat-recall#readme",
+  "bugs": {
+    "url": "https://github.com/sfw222/vs-chat-recall/issues"
+  },
+  "galleryBanner": {
+    "color": "#0b1020",
+    "theme": "dark"
+  },
   "activationEvents": ["onStartupFinished"],
   "main": "./extension.js",
   "l10n": "./l10n",
@@ -17,6 +38,22 @@
       {
         "command": "recall.openSession",
         "title": "%command.openSession.title%"
+      },
+      {
+        "command": "recall.pickDb",
+        "title": "%command.pickDb.title%"
+      },
+      {
+        "command": "recall.pickExecutable",
+        "title": "%command.pickExecutable.title%"
+      },
+      {
+        "command": "recall.collect",
+        "title": "%command.collect.title%"
+      },
+      {
+        "command": "recall.checkSetup",
+        "title": "%command.checkSetup.title%"
       }
     ],
     "configuration": {

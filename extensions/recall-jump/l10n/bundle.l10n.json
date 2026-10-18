@@ -8,5 +8,19 @@
   "(unknown)": "(unknown)",
   "Session \"{0}\" belongs to {1}. This window’s session store does not contain it (opening it directly would only start a blank new session).": "Session \"{0}\" belongs to {1}. This window’s session store does not contain it (opening it directly would only start a blank new session).",
   "Open in its window and jump": "Open in its window and jump",
-  "recall: cannot write the jump request — {0}": "recall: cannot write the jump request — {0}"
+  "recall: cannot write the jump request — {0}": "recall: cannot write the jump request — {0}",
+  "the recall CLI was not found ({0})": "the recall CLI was not found ({0})",
+  "no index file is configured (recall.db)": "no index file is configured (recall.db)",
+  "the index file does not exist: {0}": "the index file does not exist: {0}",
+  "recall-jump needs the recall CLI and its index. Missing: {0}": "recall-jump needs the recall CLI and its index. Missing: {0}",
+  "Select recall executable…": "Select recall executable…",
+  "Select index file…": "Select index file…",
+  "Run recall collect": "Run recall collect",
+  "Open download page": "Open download page",
+  "Don't show again": "Don't show again",
+  "recall: executable set to {0}": "recall: executable set to {0}",
+  "recall: index file set to {0}": "recall: index file set to {0}",
+  "Use as the recall CLI": "Use as the recall CLI",
+  "Use as the recall index": "Use as the recall index",
+  "Save the recall index here": "Save the recall index here"
 }

@@ -8,5 +8,19 @@
   "(unknown)": "(未知)",
   "Session \"{0}\" belongs to {1}. This window’s session store does not contain it (opening it directly would only start a blank new session).": "会话「{0}」属于{1}。当前窗口的会话存储不包含它（直接打开只会得到空白新会话）。",
   "Open in its window and jump": "在所属窗口打开并跳转",
-  "recall: cannot write the jump request — {0}": "recall: 无法写入跳转请求 — {0}"
+  "recall: cannot write the jump request — {0}": "recall: 无法写入跳转请求 — {0}",
+  "the recall CLI was not found ({0})": "找不到 recall CLI（{0}）",
+  "no index file is configured (recall.db)": "尚未配置索引库（recall.db）",
+  "the index file does not exist: {0}": "索引库不存在：{0}",
+  "recall-jump needs the recall CLI and its index. Missing: {0}": "recall-jump 需要 recall CLI 与索引库。当前缺失：{0}",
+  "Select recall executable…": "选择 recall 可执行文件…",
+  "Select index file…": "选择索引文件…",
+  "Run recall collect": "运行 recall collect",
+  "Open download page": "打开下载页",
+  "Don't show again": "不再提醒",
+  "recall: executable set to {0}": "recall: 可执行文件已设为 {0}",
+  "recall: index file set to {0}": "recall: 索引库已设为 {0}",
+  "Use as the recall CLI": "用作 recall CLI",
+  "Use as the recall index": "用作 recall 索引库",
+  "Save the recall index here": "在此保存 recall 索引库"
 }

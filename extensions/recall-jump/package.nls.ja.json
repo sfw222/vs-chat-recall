@@ -1,6 +1,10 @@
 {
-  "extension.description": "recall のインデックスから過去の Copilot Chat セッションを開きます（スコープ判定 + ウィンドウ跨ぎのジャンプ）",
+  "extension.description": "VS Code / GitHub Copilot Chat の履歴を収集・管理 —— ローカルインデックス、あいまい検索、元のセッションへワンクリックでジャンプ（recall CLI が必要）",
   "command.openSession.title": "Recall: 過去のセッションを開く（jump）",
+  "command.pickDb.title": "Recall: インデックスファイルを選択…",
+  "command.pickExecutable.title": "Recall: recall 実行ファイルを選択…",
+  "command.collect.title": "Recall: collect を実行（インデックス作成）",
+  "command.checkSetup.title": "Recall: セットアップを確認",
   "config.executable.description": "recall 実行ファイルのパス。空欄なら PATH 上の recall を使用",
   "config.db.description": "recall インデックスデータベースのパス（必須）",
   "config.pendingFile.description": "ジャンプ要求ファイル。空欄ならシステムの一時ディレクトリの recall-jump-request.json を使用"
