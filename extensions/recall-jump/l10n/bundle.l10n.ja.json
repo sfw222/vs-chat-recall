@@ -22,5 +22,6 @@
   "recall: index file set to {0}": "recall: インデックスを {0} に設定しました",
   "Use as the recall CLI": "recall CLI として使う",
   "Use as the recall index": "recall インデックスとして使う",
-  "Save the recall index here": "ここに recall インデックスを保存"
+  "Save the recall index here": "ここに recall インデックスを保存",
+  "recall: setup looks good (index: {0})": "recall: セットアップは正常です（インデックス: {0}）"
 }

@@ -410,7 +410,13 @@ function activate(context) {
   );
   context.subscriptions.push(vscode.commands.registerCommand('recall.collect', () => runCollect(context)));
   context.subscriptions.push(
-    vscode.commands.registerCommand('recall.checkSetup', () => checkSetup(context, { auto: false }))
+    vscode.commands.registerCommand('recall.checkSetup', async () => {
+      if (await checkSetup(context, { auto: false })) {
+        vscode.window.showInformationMessage(
+          l10n.t('recall: setup looks good (index: {0})', cfg().db)
+        );
+      }
+    })
   );
 
   // Consume pending jumps when this (possibly just opened/focused) window matches.

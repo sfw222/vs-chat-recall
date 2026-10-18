@@ -22,5 +22,6 @@
   "recall: index file set to {0}": "recall: index file set to {0}",
   "Use as the recall CLI": "Use as the recall CLI",
   "Use as the recall index": "Use as the recall index",
-  "Save the recall index here": "Save the recall index here"
+  "Save the recall index here": "Save the recall index here",
+  "recall: setup looks good (index: {0})": "recall: setup looks good (index: {0})"
 }

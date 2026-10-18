@@ -22,5 +22,6 @@
   "recall: index file set to {0}": "recall: 索引库已设为 {0}",
   "Use as the recall CLI": "用作 recall CLI",
   "Use as the recall index": "用作 recall 索引库",
-  "Save the recall index here": "在此保存 recall 索引库"
+  "Save the recall index here": "在此保存 recall 索引库",
+  "recall: setup looks good (index: {0})": "recall: 配置正常（索引：{0}）"
 }
